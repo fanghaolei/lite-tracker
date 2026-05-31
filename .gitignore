@@ -1,0 +1,29 @@
+node_modules/
+
+# Local data
+portfolio.db
+lite-tracker.db
+*.db
+*.db.*
+*.db-*
+*.sqlite
+*.sqlite3
+
+# Python runtime artifacts
+.venv/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+htmlcov/
+.coverage
+
+# Frontend build/cache artifacts
+.vite/
+static/react/
+
+# Local environment/editor noise
+.env
+.env.*
+.DS_Store
