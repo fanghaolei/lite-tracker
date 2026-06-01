@@ -1,6 +1,6 @@
-"""Unit tests for app/asset_types.py"""
+"""Unit tests for app/db/enums.py"""
 import pytest
-from app.asset_types import normalize_asset_type, AssetType, ASSET_TYPES
+from app.db.enums import normalize_asset_type, AssetType, ASSET_TYPES
 
 
 class TestNormalizeAssetType:

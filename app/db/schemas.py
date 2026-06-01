@@ -1,7 +1,7 @@
 from pydantic import BaseModel
 from datetime import date
 from typing import List, Optional
-from .asset_types import AssetType
+from app.db.enums import AssetType
 
 class TickerPayload(BaseModel):
     tickers: List[str]

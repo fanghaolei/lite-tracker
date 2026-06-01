@@ -4,8 +4,8 @@ import tempfile
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker, Session
 
-from app.core.database import Base
-from app import models
+from app.db.session import Base
+from app.db import models
 
 
 @pytest.fixture(scope="function")

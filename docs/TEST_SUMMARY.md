@@ -3,18 +3,21 @@
 ## Baseline
 
 - Command: `python -m pytest tests -q`
-- Result: 65 passed
+- Result: 70 passed
 
 ## Modules Covered
 
 - `tests/test_asset_types.py`
   - Asset type normalization rules.
-- `tests/test_crud.py`
-  - Holding upsert/delete and cash-flow CRUD logic.
+- `tests/test_operations.py`
+  - Holding upsert/delete and cash-flow repository logic.
 - `tests/test_snapshot_service.py`
   - Snapshot item calculations and serialization.
+- `tests/test_settings_service.py`
+  - Branding settings defaults and persistence.
+- `tests/test_demo_data.py`
+  - Demo database seed coverage.
 
 ## Notes
 
-- Current suite is clean except one SQLAlchemy deprecation warning from
-  `declarative_base()` in `app/core/database.py`.
+- Current suite is clean.

@@ -4,7 +4,7 @@ from urllib.request import Request, urlopen
 
 from sqlalchemy.orm import Session
 
-from . import models
+from app.db import models
 
 PROPERTY_ESTIMATE_PATTERNS = {
     "redfin": [

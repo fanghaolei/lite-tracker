@@ -53,6 +53,58 @@ Stop the app with `Ctrl+C`.
 
 If `.venv` already exists, the helper stops and asks you to remove or rename it yourself. It will also stop if you run it from inside an active virtual environment.
 
+## Demo Mode
+
+Use demo mode to try the app with fake data:
+
+Windows:
+
+```powershell
+py -3 setup_app.py --demo
+```
+
+macOS/Linux:
+
+```bash
+python3 setup_app.py --demo
+```
+
+Demo mode creates `demo-lite-tracker.db` and starts the app with `LITE_TRACKER_DB_PATH` pointing to that database. It does not modify `lite-tracker.db`.
+
+To start the demo app manually after setup:
+
+```powershell
+python main.py --demo
+```
+
+The `--demo` flag uses `demo-lite-tracker.db` and creates it with fake data if it does not exist.
+
+To return to the real local database, run:
+
+```bash
+python main.py
+```
+
+If you previously set `LITE_TRACKER_DB_PATH` manually, clear it first.
+
+PowerShell:
+
+```powershell
+Remove-Item Env:LITE_TRACKER_DB_PATH
+```
+
+Command Prompt:
+
+```cmd
+set LITE_TRACKER_DB_PATH=
+```
+
+macOS/Linux:
+
+```bash
+unset LITE_TRACKER_DB_PATH
+```
+
 ## Existing Data
 
 The local database is `lite-tracker.db` in the repo root. It is ignored by git.
@@ -95,7 +147,7 @@ npm install
 Initialize the database:
 
 ```bash
-python -c "from app.core.database import Base, engine; from app import models; Base.metadata.create_all(bind=engine)"
+python -c "from app.db.session import Base, engine; from app.db import models; Base.metadata.create_all(bind=engine)"
 ```
 
 Build frontend and start:

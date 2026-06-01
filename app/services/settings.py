@@ -3,7 +3,7 @@ from typing import Dict
 
 from sqlalchemy.orm import Session
 
-from . import models, schemas
+from app.db import models, schemas
 
 BRANDING_KEYS = (
     "app_name",

@@ -1,8 +1,8 @@
-"""Unit tests for app/crud.py"""
+"""Unit tests for app/db/operations.py"""
 import pytest
 from datetime import datetime
 
-from app import models, crud, schemas
+from app.db import models, operations, schemas
 from sqlalchemy.orm import Session
 
 
@@ -19,12 +19,12 @@ class TestGetTickerAssetType:
         db_session.add(ticker_type)
         db_session.commit()
         
-        result = crud.get_ticker_asset_type(db_session, "AAPL")
+        result = operations.get_ticker_asset_type(db_session, "AAPL")
         assert result == "stock"
 
     def test_get_nonexistent_ticker_returns_fallback(self, db_session):
         """Should return fallback for non-existent ticker."""
-        result = crud.get_ticker_asset_type(db_session, "UNKNOWN", fallback="stock")
+        result = operations.get_ticker_asset_type(db_session, "UNKNOWN", fallback="stock")
         assert result == "stock"
 
     def test_ticker_case_insensitive(self, db_session):
@@ -37,9 +37,9 @@ class TestGetTickerAssetType:
         db_session.add(ticker_type)
         db_session.commit()
         
-        assert crud.get_ticker_asset_type(db_session, "aapl") == "stock"
-        assert crud.get_ticker_asset_type(db_session, "Aapl") == "stock"
-        assert crud.get_ticker_asset_type(db_session, "AAPL") == "stock"
+        assert operations.get_ticker_asset_type(db_session, "aapl") == "stock"
+        assert operations.get_ticker_asset_type(db_session, "Aapl") == "stock"
+        assert operations.get_ticker_asset_type(db_session, "AAPL") == "stock"
 
     def test_manual_holding_normalization(self, db_session):
         """Manual holdings should have asset type normalized."""
@@ -51,7 +51,7 @@ class TestGetTickerAssetType:
         db_session.add(ticker_type)
         db_session.commit()
         
-        result = crud.get_ticker_asset_type(db_session, "GOLD", is_manual=True)
+        result = operations.get_ticker_asset_type(db_session, "GOLD", is_manual=True)
         assert result == "other"
 
 
@@ -68,7 +68,7 @@ class TestUpdateHolding:
             asset_type="stock"
         )
         
-        result = crud.update_holding(db_session, payload)
+        result = operations.update_holding(db_session, payload)
         
         assert result.ticker == "AAPL"
         assert result.shares == 100.0
@@ -97,7 +97,7 @@ class TestUpdateHolding:
             account="Brokerage"
         )
         
-        result = crud.update_holding(db_session, payload)
+        result = operations.update_holding(db_session, payload)
         
         assert result.id == holding.id
         assert result.shares == 150.0
@@ -123,7 +123,7 @@ class TestUpdateHolding:
             account="Brokerage"
         )
         
-        result = crud.update_holding(db_session, payload)
+        result = operations.update_holding(db_session, payload)
         
         assert result.id == holding.id
         assert result.shares == 200.0
@@ -143,8 +143,8 @@ class TestUpdateHolding:
             account="401k"
         )
         
-        result1 = crud.update_holding(db_session, payload1)
-        result2 = crud.update_holding(db_session, payload2)
+        result1 = operations.update_holding(db_session, payload1)
+        result2 = operations.update_holding(db_session, payload2)
         
         assert result1.id != result2.id
         assert result1.account == "Brokerage"
@@ -160,7 +160,7 @@ class TestUpdateHolding:
             is_manual=True  # Try to set to manual
         )
         
-        result = crud.update_holding(db_session, payload)
+        result = operations.update_holding(db_session, payload)
         
         assert result.ticker == "CASH"
         assert result.is_manual is False  # Should be overridden
@@ -176,7 +176,7 @@ class TestUpdateHolding:
             manual_price=1850.0
         )
         
-        result = crud.update_holding(db_session, payload)
+        result = operations.update_holding(db_session, payload)
         
         assert result.is_manual is True
         assert result.manual_price == 1850.0
@@ -192,7 +192,7 @@ class TestUpdateHolding:
             manual_price=200.0  # Should be ignored
         )
         
-        result = crud.update_holding(db_session, payload)
+        result = operations.update_holding(db_session, payload)
         
         assert result.is_manual is False
         assert result.manual_price is None
@@ -206,7 +206,7 @@ class TestUpdateHolding:
             account="Brokerage"
         )
         
-        result = crud.update_holding(db_session, payload)
+        result = operations.update_holding(db_session, payload)
         
         assert result.ticker == "AAPL"
 
@@ -225,7 +225,7 @@ class TestDeleteHolding:
         db_session.add(holding)
         db_session.commit()
         
-        result = crud.delete_holding(db_session, "AAPL", "Brokerage")
+        result = operations.delete_holding(db_session, "AAPL", "Brokerage")
         
         assert result is True
         assert db_session.query(models.Holding).filter(
@@ -234,7 +234,7 @@ class TestDeleteHolding:
 
     def test_delete_nonexistent_holding_returns_false(self, db_session):
         """Should return False when deleting non-existent holding."""
-        result = crud.delete_holding(db_session, "MISSING", "Brokerage")
+        result = operations.delete_holding(db_session, "MISSING", "Brokerage")
         assert result is False
 
     def test_delete_one_lot_deletes_history(self, db_session):
@@ -259,7 +259,7 @@ class TestDeleteHolding:
         db_session.commit()
         
         # Delete holding
-        crud.delete_holding(db_session, "AAPL", "Brokerage")
+        operations.delete_holding(db_session, "AAPL", "Brokerage")
         
         # History should be deleted
         remaining_history = db_session.query(models.History).filter(
@@ -296,7 +296,7 @@ class TestDeleteHolding:
         db_session.commit()
         
         # Delete one lot
-        crud.delete_holding(db_session, "AAPL", "Brokerage")
+        operations.delete_holding(db_session, "AAPL", "Brokerage")
         
         # History should still exist
         remaining_history = db_session.query(models.History).filter(
@@ -324,7 +324,7 @@ class TestCashFlowOperations:
             notes="Monthly mortgage"
         )
         
-        result = crud.update_cash_flow_item(db_session, payload)
+        result = operations.update_cash_flow_item(db_session, payload)
         
         assert result.name == "Mortgage"
         assert result.amount == 2000.0
@@ -354,7 +354,7 @@ class TestCashFlowOperations:
             is_paid=True
         )
         
-        result = crud.update_cash_flow_item(db_session, payload)
+        result = operations.update_cash_flow_item(db_session, payload)
         
         assert result.id == item.id
         assert result.amount == 2100.0
@@ -374,7 +374,7 @@ class TestCashFlowOperations:
         db_session.commit()
         item_id = item.id
         
-        result = crud.delete_cash_flow_item(db_session, item_id)
+        result = operations.delete_cash_flow_item(db_session, item_id)
         
         assert result is True
         remaining = db_session.query(models.CashFlowItem).filter(
@@ -403,7 +403,7 @@ class TestCashFlowOperations:
             db_session.add(item)
         db_session.commit()
         
-        result = crud.get_cash_flow_items(db_session)
+        result = operations.get_cash_flow_items(db_session)
         
         # Unpaid should come first, then sorted by due date
         assert result[0].is_paid is False
@@ -434,7 +434,7 @@ class TestRecurringCashFlow:
         
         original_updated_at = recurring.updated_at
         
-        result = crud.update_recurring_cash_flow_account(
+        result = operations.update_recurring_cash_flow_account(
             db_session,
             recurring.id,
             "Checking"
@@ -470,7 +470,7 @@ class TestRecurringCashFlow:
         db_session.add(inactive)
         db_session.commit()
         
-        result = crud.get_recurring_cash_flows(db_session)
+        result = operations.get_recurring_cash_flows(db_session)
         
         assert len(result) == 1
         assert result[0].name == "Salary"

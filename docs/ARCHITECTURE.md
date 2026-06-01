@@ -10,24 +10,34 @@
 
 - `app/api/endpoints.py`
   - API route handlers.
-- `app/crud.py`
+- `app/db/schemas.py`
+  - Pydantic request and response schemas.
+- `app/db/models.py`
+  - SQLAlchemy table models.
+- `app/db/operations.py`
   - Holding, cash-flow, and recurring cash-flow DB operations.
-- `app/asset_types.py`
+- `app/db/session.py`
+  - SQLite engine, session factory, and database path resolution.
+- `app/db/enums.py`
   - Asset type enum and normalization.
-- `app/quote_service.py`
+- `app/services/quotes.py`
   - Live quote retrieval and quote cache.
-- `app/history_service.py`
+- `app/services/history.py`
   - Price history sync and YTD portfolio history.
-- `app/snapshot_service.py`
+- `app/services/snapshots.py`
   - Snapshot creation and snapshot retrieval.
-- `app/mortgage_service.py`
+- `app/services/mortgage.py`
   - Mortgage profile and property estimate operations.
+- `app/services/settings.py`
+  - Local app branding settings.
+- `app/demo/demo_data.py`
+  - Fake demo database seed data.
 
 ## Data Flow
 
 1. Frontend calls `/api/...`.
 2. Endpoint validates input using Pydantic schemas.
-3. Endpoint delegates to CRUD/service modules.
+3. Endpoint delegates to repository/service modules.
 4. Modules read/write SQLAlchemy models.
 5. Response is serialized back to JSON.
 

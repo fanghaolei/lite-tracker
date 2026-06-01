@@ -1,10 +1,11 @@
-"""Unit tests for app/snapshot_service.py"""
+"""Unit tests for app/services/snapshots.py"""
 import pytest
 from datetime import datetime, date
 from unittest.mock import patch, MagicMock
 
-from app import models, snapshot_service
-from app.snapshot_service import (
+from app.db import models
+from app.services import snapshots
+from app.services.snapshots import (
     _snapshot_item_for_holding,
     _quote_for_holding,
     _get_asset_type_map,

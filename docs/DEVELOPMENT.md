@@ -12,9 +12,12 @@
 ## File Ownership
 
 - Backend API: `app/api/endpoints.py`
-- Domain logic: `app/*_service.py`, `app/crud.py`
-- Data model: `app/models.py`, `app/schemas.py`
-- Frontend pages/components: `frontend/src/components`
+- API schemas: `app/db/schemas.py`
+- Data access: `app/db/models.py`, `app/db/operations.py`, `app/db/session.py`
+- Domain enums: `app/db/enums.py`
+- Service logic: `app/services`
+- Demo seed data: `app/demo/demo_data.py`
+- Frontend pages/components: `ui/src/components`
 
 ## Pull Request Checklist
 

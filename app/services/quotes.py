@@ -4,7 +4,7 @@ import pandas as pd
 import yfinance as yf
 from sqlalchemy.orm import Session
 
-from . import models
+from app.db import models
 
 QUOTE_CACHE_MINUTES = 15
 

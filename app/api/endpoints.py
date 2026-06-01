@@ -1,19 +1,19 @@
 from fastapi import APIRouter, HTTPException, Depends, Query
 from sqlalchemy.orm import Session
-from ..core.database import SessionLocal
-from .. import crud, schemas
-from ..history_service import calculate_portfolio_history, sync_ticker_history
-from ..mortgage_service import (
+from app.db import operations, schemas
+from app.db.session import SessionLocal
+from app.services.history import calculate_portfolio_history, sync_ticker_history
+from app.services.mortgage import (
     get_latest_property_estimates,
     get_mortgage_profile as fetch_mortgage_profile,
     list_property_estimate_history,
     refresh_property_estimates,
 )
-from ..quote_service import get_live_quotes as fetch_live_quotes
-from ..settings_service import get_branding_settings, update_branding_settings
-from ..snapshot_service import get_snapshot as fetch_snapshot
-from ..snapshot_service import list_snapshots as fetch_snapshots
-from ..snapshot_service import save_snapshot as persist_snapshot
+from app.services.quotes import get_live_quotes as fetch_live_quotes
+from app.services.settings import get_branding_settings, update_branding_settings
+from app.services.snapshots import get_snapshot as fetch_snapshot
+from app.services.snapshots import list_snapshots as fetch_snapshots
+from app.services.snapshots import save_snapshot as persist_snapshot
 
 router = APIRouter(prefix="/api")
 
@@ -24,28 +24,28 @@ def get_db():
 
 @router.post("/holdings")
 def update_holding(holding: schemas.HoldingCreate, db: Session = Depends(get_db)):
-    db_holding = crud.update_holding(db, holding)
+    db_holding = operations.update_holding(db, holding)
     if not db_holding.is_manual:
         sync_ticker_history(db_holding.ticker, db)
     return db_holding
 
 @router.get("/holdings")
 def get_holdings(db: Session = Depends(get_db)):
-    return crud.get_holdings(db)
+    return operations.get_holdings(db)
 
 @router.post("/asset-types/{ticker}")
 def update_ticker_asset_type(ticker: str, payload: schemas.TickerAssetTypeUpdate, db: Session = Depends(get_db)):
-    return crud.update_ticker_asset_type(db, ticker, payload.asset_type)
+    return operations.update_ticker_asset_type(db, ticker, payload.asset_type)
 
 @router.delete("/holdings/{ticker}")
 def delete_holding(ticker: str, account: str = Query(...), db: Session = Depends(get_db)):
-    if not crud.delete_holding(db, ticker, account):
+    if not operations.delete_holding(db, ticker, account):
         raise HTTPException(status_code=404, detail="Holding not found")
     return {"status": "success"}
 
 @router.get("/sync")
 def sync_all(db: Session = Depends(get_db)):
-    holdings = crud.get_holdings(db)
+    holdings = operations.get_holdings(db)
     for h in holdings:
         if not h.is_manual:
             sync_ticker_history(h.ticker, db)
@@ -90,26 +90,26 @@ def save_snapshot(payload: schemas.SnapshotCreate, db: Session = Depends(get_db)
 
 @router.get("/cash-flow")
 def get_cash_flow_items(db: Session = Depends(get_db)):
-    return crud.get_cash_flow_items(db)
+    return operations.get_cash_flow_items(db)
 
 @router.post("/cash-flow")
 def update_cash_flow_item(item: schemas.CashFlowItemCreate, db: Session = Depends(get_db)):
-    return crud.update_cash_flow_item(db, item)
+    return operations.update_cash_flow_item(db, item)
 
 @router.get("/cash-flow/recurring")
 def get_recurring_cash_flows(db: Session = Depends(get_db)):
-    return crud.get_recurring_cash_flows(db)
+    return operations.get_recurring_cash_flows(db)
 
 @router.post("/cash-flow/recurring/{item_id}/cash-account")
 def update_recurring_cash_flow_account(item_id: int, payload: schemas.RecurringCashFlowAccountUpdate, db: Session = Depends(get_db)):
-    item = crud.update_recurring_cash_flow_account(db, item_id, payload.cash_account or "")
+    item = operations.update_recurring_cash_flow_account(db, item_id, payload.cash_account or "")
     if not item:
         raise HTTPException(status_code=404, detail="Recurring cash flow not found")
     return item
 
 @router.delete("/cash-flow/{item_id}")
 def delete_cash_flow_item(item_id: int, db: Session = Depends(get_db)):
-    if not crud.delete_cash_flow_item(db, item_id):
+    if not operations.delete_cash_flow_item(db, item_id):
         raise HTTPException(status_code=404, detail="Cash flow item not found")
     return {"status": "success"}
 

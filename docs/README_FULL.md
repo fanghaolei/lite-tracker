@@ -11,13 +11,17 @@ This file is a compact technical overview. Use it when you need one page with co
 ## Backend Modules
 
 - `app/api/endpoints.py` - API routes
-- `app/crud.py` - DB write/read operations
-- `app/asset_types.py` - asset type enum and normalization
-- `app/quote_service.py` - live quotes and cache
-- `app/history_service.py` - YTD history and sync
-- `app/snapshot_service.py` - snapshot logic
-- `app/mortgage_service.py` - mortgage and property estimates
-- `app/settings_service.py` - local app settings
+- `app/db/schemas.py` - Pydantic API schemas
+- `app/db/models.py` - SQLAlchemy table models
+- `app/db/operations.py` - DB read/write operations
+- `app/db/session.py` - SQLite engine and session setup
+- `app/db/enums.py` - asset type enum and normalization
+- `app/services/quotes.py` - live quotes and cache
+- `app/services/history.py` - YTD history and sync
+- `app/services/snapshots.py` - snapshot logic
+- `app/services/mortgage.py` - mortgage and property estimates
+- `app/services/settings.py` - local app settings
+- `app/demo/demo_data.py` - fake demo database setup
 
 ## Frontend Entry Points
 
@@ -28,7 +32,7 @@ This file is a compact technical overview. Use it when you need one page with co
 
 ## Current Test Baseline
 
-- 69 tests passing in `tests/`
+- 70 tests passing in `tests/`
 
 ## Common Commands
 

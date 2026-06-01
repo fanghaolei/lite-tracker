@@ -3,7 +3,9 @@
 
 from __future__ import annotations
 
+import argparse
 import os
+import shutil
 import subprocess
 import sys
 import venv
@@ -12,22 +14,33 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent
 VENV_DIR = ROOT / ".venv"
+DEMO_DB_PATH = ROOT / "demo-lite-tracker.db"
 
 
 def main() -> int:
+    parser = argparse.ArgumentParser(description="Set up and start Lite Tracker.")
+    parser.add_argument("--demo", action="store_true", help="Create fake demo data and start against demo-lite-tracker.db.")
+    args = parser.parse_args()
+
     python = create_venv()
     print(f"Using Python: {python}")
 
     install_python_dependencies(python)
     install_node_dependencies()
-    initialize_database(python)
+    if args.demo:
+        initialize_demo_database(python)
+    else:
+        initialize_database(python)
     build_frontend()
 
     print("\nSetup complete.")
-    print("Database: lite-tracker.db")
+    print(f"Database: {'demo-lite-tracker.db' if args.demo else 'lite-tracker.db'}")
     print("App URL:  http://127.0.0.1:8000")
     print("\nStarting Lite Tracker...")
-    run([str(python), "main.py"])
+    command = [str(python), "main.py"]
+    if args.demo:
+        command.append("--demo")
+    run(command)
     return 0
 
 
@@ -75,10 +88,20 @@ def build_frontend() -> None:
 
 def initialize_database(python: Path) -> None:
     script = (
-        "from app.core.database import Base, DB_PATH, engine; "
-        "from app import models; "
+        "from app.db.session import Base, DB_PATH, engine; "
+        "from app.db import models; "
         "Base.metadata.create_all(bind=engine); "
         "print(f'Initialized SQLite schema at {DB_PATH}')"
+    )
+    run([str(python), "-c", script])
+
+
+def initialize_demo_database(python: Path) -> None:
+    script = (
+        "from pathlib import Path; "
+        "from app.demo.demo_data import create_demo_database; "
+        f"create_demo_database(Path(r'{DEMO_DB_PATH}')); "
+        f"print(r'Initialized demo SQLite data at {DEMO_DB_PATH}')"
     )
     run([str(python), "-c", script])
 

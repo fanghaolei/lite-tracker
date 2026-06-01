@@ -5,7 +5,7 @@ import yfinance as yf
 from sqlalchemy import func
 from sqlalchemy.orm import Session
 
-from . import models
+from app.db import models
 
 _portfolio_history_cache = None
 
