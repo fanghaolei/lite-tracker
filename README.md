@@ -6,7 +6,7 @@ Lite Tracker is a local-first finance tracker with a FastAPI backend and a React
 
 [![Animated demo preview](docs/assets/demo/demo-preview.gif)](docs/assets/demo/demo-preview.gif)
 
-Click the preview to open and replay the GIF.
+The preview is captured from demo mode with fake data. Click it to open and replay the GIF; the sequence returns to Portfolio at the end.
 
 Screenshots:
 [Portfolio](docs/assets/demo/portfolio.png) |

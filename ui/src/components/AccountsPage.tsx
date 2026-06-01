@@ -5,6 +5,7 @@ import {
   buildAccountGroups,
   calculateSummary,
   getAccountAllocations,
+  getYahooFinanceUrl,
   getQuoteTickers,
   money,
   signedMoney,
@@ -123,9 +124,15 @@ export function AccountsPage() {
                     const pnlPct = lot.ticker !== 'CASH' && lot.average_cost > 0 ? ((lot.live - lot.average_cost) / lot.average_cost) * 100 : 0;
                     const sizeLabel = lot.ticker === 'CASH' ? 'Cash balance' : `${lot.shares.toLocaleString()} @ ${money(lot.average_cost)}`;
                     const icon = lot.ticker === 'CASH' ? '🪙' : (lot.is_manual ? '💎' : '🌿');
+                    const quoteUrl = getYahooFinanceUrl(lot.ticker, Boolean(lot.is_manual));
                     return (
                       <tr key={lot.id} className="hover:bg-blue-50/20 dark:hover:bg-slate-800/60 text-sm text-gray-500 dark:text-gray-300 group row-transition">
-                        <td className="px-8 py-2 italic whitespace-nowrap">{icon} {lot.ticker}</td>
+                        <td className="px-8 py-2 italic whitespace-nowrap">
+                          {icon}{' '}
+                          {quoteUrl
+                            ? <a href={quoteUrl} target="_blank" rel="noreferrer" className="text-gray-700 dark:text-gray-200 hover:text-emerald-600 dark:hover:text-emerald-300 hover:underline underline-offset-4">{lot.ticker}</a>
+                            : lot.ticker}
+                        </td>
                         <td className="px-5 py-2 whitespace-nowrap">{sizeLabel}</td>
                         <td className="px-5 py-2">{money(costBasis)}</td>
                         <td className="px-5 py-2 whitespace-nowrap">{signedMoney(lot.daily_pnl)}</td>

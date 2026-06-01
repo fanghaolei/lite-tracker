@@ -65,6 +65,12 @@ export function getQuoteTickers(holdings: Holding[]): string[] {
     .map(h => h.ticker))];
 }
 
+export function getYahooFinanceUrl(ticker: string, isManual = false): string | null {
+  const normalized = ticker.trim().toUpperCase();
+  if (!normalized || normalized === 'CASH' || isManual) return null;
+  return `https://finance.yahoo.com/quote/${encodeURIComponent(normalized)}`;
+}
+
 export function getHoldingQuote(holding: Holding, quotes: Quotes): Quote {
   if (holding.ticker === 'CASH') return { price: 1, prev_close: 1 };
   if (holding.is_manual) {
@@ -102,8 +108,8 @@ export function calculateSummary(holdings: Holding[], quotes: Quotes): Portfolio
 
 export function getPalette(): string[] {
   return [
-    '#60a5fa', '#f472b6', '#34d399', '#fbbf24', '#a78bfa',
-    '#fb7185', '#22d3ee', '#c084fc', '#f97316', '#84cc16'
+    '#059669', '#84cc16', '#d97706', '#0f766e', '#475569',
+    '#f59e0b', '#14b8a6', '#65a30d', '#b45309', '#2563eb'
   ];
 }
 

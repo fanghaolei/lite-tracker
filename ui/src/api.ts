@@ -1,6 +1,13 @@
 import type { AssetType, BrandingSettings, BrandingSettingsPayload, CashFlowItem, CashFlowPayload, HistoryPoint, Holding, HoldingPayload, MortgageEstimateResponse, MortgageProfile, Quotes, RecurringCashFlow, Snapshot } from './types';
 
 const API_URL = '/api';
+export const BRANDING_CACHE_KEY = 'liteTracker.branding';
+
+declare global {
+  interface Window {
+    __LITE_TRACKER_BRANDING__?: Partial<BrandingSettings>;
+  }
+}
 
 async function json<T>(res: Response): Promise<T> {
   if (!res.ok) throw new Error(`Request failed: ${res.status}`);
@@ -50,15 +57,45 @@ export async function fetchQuotes(tickers: string[]): Promise<Quotes> {
 }
 
 export async function fetchBrandingSettings(): Promise<BrandingSettings> {
-  return json<BrandingSettings>(await fetch(`${API_URL}/settings/branding`));
+  const settings = await json<BrandingSettings>(await fetch(`${API_URL}/settings/branding`));
+  cacheBrandingSettings(settings);
+  return settings;
 }
 
 export async function saveBrandingSettings(payload: BrandingSettingsPayload): Promise<BrandingSettings> {
-  return json<BrandingSettings>(await fetch(`${API_URL}/settings/branding`, {
+  const settings = await json<BrandingSettings>(await fetch(`${API_URL}/settings/branding`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(payload)
   }));
+  cacheBrandingSettings(settings);
+  return settings;
+}
+
+export function getCachedBrandingSettings(fallback: BrandingSettings): BrandingSettings {
+  const bootstrapped = window.__LITE_TRACKER_BRANDING__;
+  if (bootstrapped?.app_name) {
+    const settings = { ...fallback, ...bootstrapped };
+    cacheBrandingSettings(settings);
+    return settings;
+  }
+
+  try {
+    const raw = localStorage.getItem(BRANDING_CACHE_KEY);
+    if (!raw) return fallback;
+    const cached = JSON.parse(raw) as Partial<BrandingSettings>;
+    return { ...fallback, ...cached };
+  } catch {
+    return fallback;
+  }
+}
+
+export function cacheBrandingSettings(settings: BrandingSettings): void {
+  try {
+    localStorage.setItem(BRANDING_CACHE_KEY, JSON.stringify(settings));
+  } catch {
+    // Ignore unavailable storage.
+  }
 }
 
 export function triggerSync(): Promise<Response> {

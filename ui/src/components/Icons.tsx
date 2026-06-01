@@ -61,3 +61,12 @@ export function EyeIcon({ hidden }: { hidden: boolean }) {
     </svg>
   );
 }
+
+export function PieModeIcon() {
+  return (
+    <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M11 3a9 9 0 109 9h-9V3z" />
+      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M14 3.5A9 9 0 0120.5 10H14V3.5z" />
+    </svg>
+  );
+}

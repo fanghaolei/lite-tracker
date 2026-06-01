@@ -11,15 +11,17 @@ import {
   LinearScale,
   LineController,
   LineElement,
+  PieController,
   PointElement,
   Tooltip
 } from 'chart.js';
 import { getThemeColors } from '../hooks';
 import { getPalette, wholeMoney } from '../finance';
-import type { HistoryPoint } from '../types';
+import type { AssetType, HistoryPoint } from '../types';
 
 Chart.register(
   LineController,
+  PieController,
   DoughnutController,
   BarController,
   CategoryScale,
@@ -99,6 +101,78 @@ export function PortfolioLineChart({ history, privacyMode, themeSignal }: LinePr
   }, [history, privacyMode, themeSignal]);
 
   return <canvas ref={canvasRef} />;
+}
+
+type PortfolioAllocation = {
+  label: string;
+  value: number;
+  asset_type?: AssetType;
+};
+
+type PortfolioPieProps = {
+  allocations: PortfolioAllocation[];
+  privacyMode: boolean;
+  themeSignal: string;
+  mode: 'ticker' | 'type';
+};
+
+export function PortfolioAllocationPieChart({ allocations, privacyMode, themeSignal, mode }: PortfolioPieProps) {
+  const canvasRef = useRef<HTMLCanvasElement | null>(null);
+
+  useEffect(() => {
+    if (!canvasRef.current) return undefined;
+    const colors = getThemeColors();
+    const total = allocations.reduce((sum, item) => sum + item.value, 0);
+    const chart = new Chart(canvasRef.current, {
+      type: 'pie',
+      data: {
+        labels: allocations.map(item => item.label),
+        datasets: [{
+          label: mode === 'type' ? 'By Type' : 'By Ticker',
+          data: allocations.map(item => item.value),
+          backgroundColor: allocationColors(allocations, mode),
+          borderColor: colors.border,
+          borderWidth: 2,
+          hoverOffset: 10
+        }]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+          legend: { display: false },
+          tooltip: {
+            callbacks: {
+              label: context => {
+                const value = Number(context.parsed || 0);
+                const percent = total > 0 ? (value / total * 100).toFixed(1) : '0.0';
+                if (privacyMode) return `${context.label}: $*** (${percent}%)`;
+                return `${context.label}: ${wholeMoney(value)} (${percent}%)`;
+              }
+            }
+          }
+        }
+      }
+    });
+    return () => chart.destroy();
+  }, [allocations, mode, privacyMode, themeSignal]);
+
+  return <canvas ref={canvasRef} />;
+}
+
+function allocationColors(allocations: PortfolioAllocation[], mode: 'ticker' | 'type'): string[] {
+  if (mode === 'type') {
+    const typeColors: Record<AssetType, string> = {
+      stock: '#059669',
+      fund: '#84cc16',
+      'cash equivalents': '#d97706',
+      crypto: '#0f766e',
+      other: '#475569'
+    };
+    return allocations.map(item => typeColors[item.asset_type || 'other']);
+  }
+  const palette = getPalette();
+  return allocations.map((_, index) => palette[index % palette.length]);
 }
 
 type DoughnutProps = {

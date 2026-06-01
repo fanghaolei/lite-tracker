@@ -17,6 +17,7 @@ import {
   calculateSummary,
   formatAssetType,
   getAssetTypeIcon,
+  getYahooFinanceUrl,
   getQuoteTickers,
   money,
   signedMoney,
@@ -25,8 +26,8 @@ import {
   wholeMoney
 } from '../finance';
 import type { AssetGroup, AssetType, Holding, HoldingPayload, HistoryPoint, Quotes, Snapshot, SortDir } from '../types';
-import { PortfolioLineChart } from './Charts';
-import { ChevronIcon, EditIcon, PlusIcon, TrashIcon } from './Icons';
+import { PortfolioAllocationPieChart, PortfolioLineChart } from './Charts';
+import { ChevronIcon, EditIcon, PieModeIcon, PlusIcon, TrashIcon } from './Icons';
 import { Header } from './Header';
 
 type FormState = {
@@ -66,6 +67,7 @@ export function PortfolioPage() {
   const [busySync, setBusySync] = useState(false);
   const [busySnapshot, setBusySnapshot] = useState(false);
   const [splitByType, setSplitByType] = useState(false);
+  const [pieMode, setPieMode] = useState<'ticker' | 'type'>('ticker');
 
   const refresh = useCallback(async () => {
     try {
@@ -98,6 +100,10 @@ export function PortfolioPage() {
   const summary = useMemo(() => calculateSummary(holdings, quotes), [holdings, quotes]);
   const { groups, cashHoldings, totalValue } = useMemo(() => buildAssetGroups(holdings, quotes), [holdings, quotes]);
   const sortedGroups = useMemo(() => sortData(groups, sortKey, sortDir), [groups, sortKey, sortDir]);
+  const pieAllocations = useMemo(
+    () => buildPortfolioPieAllocations(groups, summary.cashVal, pieMode),
+    [groups, pieMode, summary.cashVal]
+  );
 
   function handleSort(key: keyof AssetGroup) {
     if (sortKey === key) setSortDir(current => (current === 1 ? -1 : 1));
@@ -245,35 +251,54 @@ export function PortfolioPage() {
     <div className="max-w-screen-2xl mx-auto px-4 py-12">
       <Header view="portfolio" theme={theme} privacyMode={privacyMode} onToggleTheme={toggleTheme} onTogglePrivacy={togglePrivacy} controls={controls} stats={stats} />
 
-      <div className="bg-white dark:bg-indigo-950/50 rounded-3xl shadow-xl shadow-emerald-200/20 dark:shadow-none border border-emerald-100 dark:border-emerald-900/30 p-6 mb-8 h-72 overflow-hidden">
-        <div className="chart-container">
-          <PortfolioLineChart history={history} privacyMode={privacyMode} themeSignal={theme} />
+      <div className="grid grid-cols-1 xl:grid-cols-[minmax(0,1fr)_22rem] gap-4 mb-8">
+        <div className="bg-white dark:bg-indigo-950/50 rounded-3xl shadow-xl shadow-emerald-200/20 dark:shadow-none border border-emerald-100 dark:border-emerald-900/30 p-6 h-72 overflow-hidden">
+          <div className="chart-container">
+            <PortfolioLineChart history={history} privacyMode={privacyMode} themeSignal={theme} />
+          </div>
+        </div>
+        <div className="relative bg-white dark:bg-indigo-950/50 rounded-3xl shadow-xl shadow-emerald-200/20 dark:shadow-none border border-emerald-100 dark:border-emerald-900/30 p-6 h-72 overflow-hidden">
+          <button
+            type="button"
+            onClick={() => setPieMode(current => current === 'ticker' ? 'type' : 'ticker')}
+            aria-label={pieMode === 'ticker' ? 'Show allocation by type' : 'Show allocation by ticker'}
+            title={pieMode === 'ticker' ? 'Show by type' : 'Show by ticker'}
+            className="absolute right-4 top-4 z-10 rounded-full bg-emerald-50 p-2 text-emerald-700 shadow-sm hover:bg-emerald-100 dark:bg-emerald-900/30 dark:text-emerald-200 dark:hover:bg-emerald-900/50"
+          >
+            <PieModeIcon />
+          </button>
+          <div className="mb-2 text-xs font-black uppercase tracking-widest text-emerald-600">
+            {pieMode === 'ticker' ? 'Allocation by Ticker' : 'Allocation by Type'}
+          </div>
+          <div className="h-[13.5rem]">
+            <PortfolioAllocationPieChart allocations={pieAllocations} privacyMode={privacyMode} themeSignal={theme} mode={pieMode} />
+          </div>
         </div>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-4">
-        <section className="bg-white dark:bg-indigo-950/50 rounded-2xl shadow-sm border border-emerald-100 dark:border-emerald-900/30 p-6 h-full flex flex-col justify-center">
-          <h2 className="text-xs font-black uppercase tracking-widest text-emerald-600 mb-4">🌱 Plant Capital</h2>
-          <form id="position-form" onSubmit={handleSubmit} className="grid grid-cols-2 xl:grid-cols-4 gap-4 items-end">
-            <Field label="Symbol"><input value={form.ticker} onChange={event => setForm({ ...form, ticker: event.target.value })} required placeholder="AAPL" className="w-full bg-gray-50 dark:bg-gray-900 border-none dark:text-white rounded-xl px-4 py-3 focus:ring-2 focus:ring-blue-500 transition-all uppercase" /></Field>
+      <div className="grid grid-cols-1 xl:grid-cols-[minmax(0,1fr)_22rem] gap-4 mb-4 items-start">
+        <CashTable cashHoldings={cashHoldings} totalValue={totalValue} editingId={editingId} onEdit={setEditingId} onSave={handleInlineSave} onCancel={() => setEditingId(null)} onDelete={handleDelete} onAddCash={() => setForm({ ...emptyForm, ticker: 'CASH', asset_type: 'cash equivalents' })} />
+
+        <section className="bg-white dark:bg-indigo-950/50 rounded-2xl shadow-sm border border-emerald-100 dark:border-emerald-900/30 p-4">
+          <h2 className="text-[11px] font-black uppercase tracking-widest text-emerald-600 mb-3">🌱 Plant Capital</h2>
+          <form id="position-form" onSubmit={handleSubmit} className="grid grid-cols-2 gap-3 items-end">
+            <Field label="Symbol"><input value={form.ticker} onChange={event => setForm({ ...form, ticker: event.target.value })} required placeholder="AAPL" className="w-full bg-gray-50 dark:bg-gray-900 border-none dark:text-white rounded-lg px-3 py-2.5 focus:ring-2 focus:ring-blue-500 transition-all uppercase" /></Field>
             <Field label="Type">
-              <select value={form.ticker.toUpperCase() === 'CASH' ? 'cash equivalents' : form.asset_type} onChange={event => setForm({ ...form, asset_type: event.target.value as AssetType })} disabled={form.ticker.toUpperCase() === 'CASH'} className="w-full bg-gray-50 dark:bg-gray-900 border-none dark:text-white rounded-xl px-4 py-3 focus:ring-2 focus:ring-blue-500 transition-all">
+              <select value={form.ticker.toUpperCase() === 'CASH' ? 'cash equivalents' : form.asset_type} onChange={event => setForm({ ...form, asset_type: event.target.value as AssetType })} disabled={form.ticker.toUpperCase() === 'CASH'} className="w-full bg-gray-50 dark:bg-gray-900 border-none dark:text-white rounded-lg px-3 py-2.5 focus:ring-2 focus:ring-blue-500 transition-all">
                 {ASSET_TYPES.map(type => <option key={type} value={type}>{formatAssetType(type)}</option>)}
               </select>
             </Field>
-            <Field label="Account"><input value={form.account} onChange={event => setForm({ ...form, account: event.target.value })} required placeholder="E-Trade" className="w-full bg-gray-50 dark:bg-gray-900 border-none dark:text-white rounded-xl px-4 py-3 focus:ring-2 focus:ring-blue-500 transition-all" /></Field>
-            <Field label="Quantity"><input type="number" step="any" value={form.shares} onChange={event => setForm({ ...form, shares: event.target.value })} required placeholder="0.00" className="w-full bg-gray-50 dark:bg-gray-900 border-none dark:text-white rounded-xl px-4 py-3 focus:ring-2 focus:ring-blue-500 transition-all" /></Field>
-            <Field label="Avg Price"><input type="number" step="any" value={form.average_cost} onChange={event => setForm({ ...form, average_cost: event.target.value })} required placeholder="0.00" className="w-full bg-gray-50 dark:bg-gray-900 border-none dark:text-white rounded-xl px-4 py-3 focus:ring-2 focus:ring-blue-500 transition-all" /></Field>
-            <Field label="Pricing"><label className="flex items-center gap-2 h-[48px] bg-emerald-50 dark:bg-emerald-950/30 text-emerald-700 dark:text-emerald-200 rounded-xl px-4 font-bold cursor-pointer"><input type="checkbox" checked={form.is_manual} onChange={event => setForm({ ...form, is_manual: event.target.checked, asset_type: event.target.checked && form.asset_type === 'stock' ? 'other' : form.asset_type, manual_price: event.target.checked ? form.manual_price : '' })} className="h-4 w-4 rounded border-emerald-300 text-emerald-600 focus:ring-emerald-500" />Manual</label></Field>
-            {form.is_manual && <Field label="Live Price"><input type="number" step="any" value={form.manual_price} onChange={event => setForm({ ...form, manual_price: event.target.value })} required placeholder="0.00" className="w-full bg-amber-50 dark:bg-amber-900/20 border-none dark:text-white rounded-xl px-4 py-3 focus:ring-2 focus:ring-amber-500 transition-all" /></Field>}
-            <div className="flex gap-2 col-span-2 xl:col-span-2">
-              <button type="submit" className="flex-1 cali-gradient text-white font-bold py-3 px-4 rounded-xl hover:opacity-90 transition-all shadow-sm shadow-emerald-200">Save</button>
-              <button type="button" onClick={() => setForm(emptyForm)} className="bg-amber-50 dark:bg-amber-900/20 text-amber-600 font-bold py-3 px-4 rounded-xl hover:bg-amber-100 transition-all">Clear</button>
+            <Field label="Account"><input value={form.account} onChange={event => setForm({ ...form, account: event.target.value })} required placeholder="E-Trade" className="w-full bg-gray-50 dark:bg-gray-900 border-none dark:text-white rounded-lg px-3 py-2.5 focus:ring-2 focus:ring-blue-500 transition-all" /></Field>
+            <Field label="Quantity"><input type="number" step="any" value={form.shares} onChange={event => setForm({ ...form, shares: event.target.value })} required placeholder="0.00" className="w-full bg-gray-50 dark:bg-gray-900 border-none dark:text-white rounded-lg px-3 py-2.5 focus:ring-2 focus:ring-blue-500 transition-all" /></Field>
+            <Field label="Avg Price"><input type="number" step="any" value={form.average_cost} onChange={event => setForm({ ...form, average_cost: event.target.value })} required placeholder="0.00" className="w-full bg-gray-50 dark:bg-gray-900 border-none dark:text-white rounded-lg px-3 py-2.5 focus:ring-2 focus:ring-blue-500 transition-all" /></Field>
+            <Field label="Pricing"><label className="flex items-center gap-2 h-[42px] bg-emerald-50 dark:bg-emerald-950/30 text-emerald-700 dark:text-emerald-200 rounded-lg px-3 text-sm font-bold cursor-pointer"><input type="checkbox" checked={form.is_manual} onChange={event => setForm({ ...form, is_manual: event.target.checked, asset_type: event.target.checked && form.asset_type === 'stock' ? 'other' : form.asset_type, manual_price: event.target.checked ? form.manual_price : '' })} className="h-4 w-4 rounded border-emerald-300 text-emerald-600 focus:ring-emerald-500" />Manual</label></Field>
+            {form.is_manual && <Field label="Live Price"><input type="number" step="any" value={form.manual_price} onChange={event => setForm({ ...form, manual_price: event.target.value })} required placeholder="0.00" className="w-full bg-amber-50 dark:bg-amber-900/20 border-none dark:text-white rounded-lg px-3 py-2.5 focus:ring-2 focus:ring-amber-500 transition-all" /></Field>}
+            <div className="flex gap-2 col-span-2">
+              <button type="submit" className="flex-1 cali-gradient text-white font-bold py-2.5 px-4 rounded-lg hover:opacity-90 transition-all shadow-sm shadow-emerald-200">Save</button>
+              <button type="button" onClick={() => setForm(emptyForm)} className="bg-amber-50 dark:bg-amber-900/20 text-amber-600 font-bold py-2.5 px-4 rounded-lg hover:bg-amber-100 transition-all">Clear</button>
             </div>
           </form>
         </section>
-
-        <CashTable cashHoldings={cashHoldings} totalValue={totalValue} editingId={editingId} onEdit={setEditingId} onSave={handleInlineSave} onCancel={() => setEditingId(null)} onDelete={handleDelete} onAddCash={() => setForm({ ...emptyForm, ticker: 'CASH', asset_type: 'cash equivalents' })} />
       </div>
 
       {splitByType ? (
@@ -305,6 +330,33 @@ function groupByAssetType(groups: AssetGroup[]) {
   return ASSET_TYPES
     .map(type => ({ type, groups: groups.filter(group => group.asset_type === type) }))
     .filter(section => section.groups.length > 0);
+}
+
+function buildPortfolioPieAllocations(groups: AssetGroup[], cashValue: number, mode: 'ticker' | 'type') {
+  if (mode === 'type') {
+    const valuesByType = ASSET_TYPES.reduce<Record<AssetType, number>>((acc, type) => {
+      acc[type] = type === 'cash equivalents' ? cashValue : 0;
+      return acc;
+    }, {} as Record<AssetType, number>);
+    groups.forEach(group => {
+      valuesByType[group.asset_type] = (valuesByType[group.asset_type] || 0) + group.market_value;
+    });
+    return ASSET_TYPES
+      .map(type => ({ label: formatAssetType(type), asset_type: type, value: valuesByType[type] || 0 }))
+      .filter(item => item.value > 0);
+  }
+
+  const allocations = groups.map(group => ({
+    label: group.ticker,
+    asset_type: group.asset_type,
+    value: group.market_value
+  }));
+  if (cashValue > 0) {
+    allocations.push({ label: 'CASH', asset_type: 'cash equivalents', value: cashValue });
+  }
+  return allocations
+    .filter(item => item.value > 0)
+    .sort((a, b) => b.value - a.value);
 }
 
 type CashSortKey = 'account' | 'shares' | 'percent';
@@ -348,7 +400,7 @@ function CashTable(props: {
           {sortedCashHoldings.map(cash => props.editingId === cash.id
             ? <EditRow key={cash.id} lot={cash} colSpan={1} isCashTable showCost={false} onSave={props.onSave} onCancel={props.onCancel} />
             : <tr key={cash.id} className="bg-gray-50/30 dark:bg-gray-800/30 text-sm text-gray-600 dark:text-gray-300 group row-transition">
-              <td className="px-5 py-2 font-bold text-blue-600 dark:text-blue-400 whitespace-nowrap">🪙 {cash.account}</td>
+              <td className="px-5 py-2 font-bold text-amber-700 dark:text-amber-300 whitespace-nowrap">🪙 {cash.account}</td>
               <td className="px-5 py-2 whitespace-nowrap">{cash.shares.toLocaleString()}</td>
               <td className="px-5 py-2 font-mono text-gray-500 dark:text-gray-300 whitespace-nowrap">{props.totalValue > 0 ? (cash.shares / props.totalValue * 100).toFixed(1) : '0.0'}%</td>
               <td className="px-5 py-2 text-right whitespace-nowrap"><RowActions onEdit={() => props.onEdit(cash.id)} onDelete={() => props.onDelete('CASH', cash.account)} /></td>
@@ -405,10 +457,17 @@ function PortfolioTable(props: {
           {props.groups.map(group => {
             const expanded = props.expandedTickers.includes(group.ticker);
             const icon = getAssetTypeIcon(group.asset_type);
+            const quoteUrl = getYahooFinanceUrl(group.ticker, group.lots.every(lot => Boolean(lot.is_manual)));
             return (
               <FragmentGroup key={group.ticker}>
                 <tr className="bg-gray-50/50 dark:bg-gray-800/50 font-semibold border-t-2 border-gray-100 dark:border-gray-700 cursor-pointer hover:bg-gray-100/80 dark:hover:bg-gray-700/80 transition-colors" onClick={() => props.onToggle(group.ticker)}>
-                  <td className="px-5 py-3 text-gray-900 dark:text-white whitespace-nowrap flex items-center gap-2"><ChevronIcon open={expanded} /><span className="text-base leading-none" title={formatAssetType(group.asset_type)}>{icon}</span>{group.ticker}</td>
+                  <td className="px-5 py-3 text-gray-900 dark:text-white whitespace-nowrap flex items-center gap-2">
+                    <ChevronIcon open={expanded} />
+                    <span className="text-base leading-none" title={formatAssetType(group.asset_type)}>{icon}</span>
+                    {quoteUrl
+                      ? <a href={quoteUrl} target="_blank" rel="noreferrer" onClick={event => event.stopPropagation()} className="hover:text-emerald-600 dark:hover:text-emerald-300 hover:underline underline-offset-4">{group.ticker}</a>
+                      : <span>{group.ticker}</span>}
+                  </td>
                   <td className="px-5 py-3 text-gray-600 dark:text-gray-300 whitespace-nowrap" onClick={event => event.stopPropagation()}>
                     <select value={group.asset_type} onChange={event => props.onTypeChange(group.ticker, event.target.value as AssetType)} className="min-w-[8rem] border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 text-gray-700 dark:text-gray-100 rounded-lg px-2 py-1 text-xs font-bold focus:ring-2 focus:ring-emerald-500">
                       {ASSET_TYPES.map(type => <option key={type} value={type}>{formatAssetType(type)}</option>)}

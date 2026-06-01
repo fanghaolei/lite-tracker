@@ -1,5 +1,5 @@
 import { useEffect, useState, type FormEvent, type ReactNode } from 'react';
-import { fetchBrandingSettings, saveBrandingSettings } from '../api';
+import { cacheBrandingSettings, fetchBrandingSettings, getCachedBrandingSettings, saveBrandingSettings } from '../api';
 import type { Theme } from '../hooks';
 import type { BrandingSettings } from '../types';
 import { EditIcon, EyeIcon, MoonIcon, SunIcon } from './Icons';
@@ -46,9 +46,9 @@ const subtitleKeys: Record<View, keyof BrandingSettings> = {
 };
 
 export function Header({ view, theme, privacyMode, onToggleTheme, onTogglePrivacy, controls, stats }: Props) {
-  const [branding, setBranding] = useState<BrandingSettings>(defaultBranding);
+  const [branding, setBranding] = useState<BrandingSettings>(() => getCachedBrandingSettings(defaultBranding));
   const [isEditingBranding, setIsEditingBranding] = useState(false);
-  const [draftName, setDraftName] = useState(defaultBranding.app_name);
+  const [draftName, setDraftName] = useState(() => getCachedBrandingSettings(defaultBranding).app_name);
   const [isSavingBranding, setIsSavingBranding] = useState(false);
   const [brandingError, setBrandingError] = useState('');
   const active = 'text-sm font-bold pb-1 border-b-2 border-emerald-500 text-emerald-600 dark:text-emerald-300';
@@ -61,6 +61,7 @@ export function Header({ view, theme, privacyMode, onToggleTheme, onTogglePrivac
       .then(data => {
         if (mounted) {
           const nextBranding = { ...defaultBranding, ...data };
+          cacheBrandingSettings(nextBranding);
           setBranding(nextBranding);
           setDraftName(nextBranding.app_name);
         }
