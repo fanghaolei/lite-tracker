@@ -69,26 +69,51 @@ def get_live_quotes(tickers: list, db: Session = None, force: bool = False):
     cached_by_ticker = {row.ticker: row for row in cached_rows}
     for ticker in yahoo_tickers:
         row = cached_by_ticker.get(ticker)
-        if row and row.fetched_at and row.fetched_at >= fresh_after and not force:
-            quotes[ticker] = {"price": row.price, "prev_close": row.prev_close, "cached": True}
+        if row and row.fetched_at and row.fetched_at >= fresh_after and _is_valid_quote(row.price) and not force:
+            quotes[ticker] = _cached_quote(row)
         else:
             missing.append(ticker)
 
     if missing:
         fetched = fetch_yahoo_quotes(missing)
-        for ticker, quote in fetched.items():
+        changed = False
+        for ticker in missing:
+            quote = fetched.get(ticker, {"price": 0, "prev_close": 0})
             price = quote.get("price", 0)
             prev_close = quote.get("prev_close", 0)
             row = cached_by_ticker.get(ticker) or db.query(models.QuoteCache).filter(
                 models.QuoteCache.ticker == ticker
             ).first()
-            if row:
-                row.price = price
-                row.prev_close = prev_close
-                row.fetched_at = now
+
+            if _is_valid_quote(price):
+                if row:
+                    row.price = price
+                    row.prev_close = prev_close
+                    row.fetched_at = now
+                else:
+                    db.add(models.QuoteCache(ticker=ticker, price=price, prev_close=prev_close, fetched_at=now))
+                quotes[ticker] = {"price": price, "prev_close": prev_close, "cached": False}
+                changed = True
+            elif row and _is_valid_quote(row.price):
+                quotes[ticker] = _cached_quote(row, stale=True)
             else:
-                db.add(models.QuoteCache(ticker=ticker, price=price, prev_close=prev_close, fetched_at=now))
-            quotes[ticker] = {"price": price, "prev_close": prev_close, "cached": False}
-        db.commit()
+                quotes[ticker] = {"price": 0, "prev_close": 0, "cached": False}
+
+        if changed:
+            db.commit()
 
     return quotes
+
+
+def _is_valid_quote(price) -> bool:
+    try:
+        return float(price or 0) > 0
+    except (TypeError, ValueError):
+        return False
+
+
+def _cached_quote(row, stale: bool = False):
+    quote = {"price": row.price, "prev_close": row.prev_close, "cached": True}
+    if stale:
+        quote["stale"] = True
+    return quote

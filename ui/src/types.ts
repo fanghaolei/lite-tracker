@@ -2,6 +2,7 @@ export type Quote = {
   price: number;
   prev_close: number;
   cached?: boolean;
+  stale?: boolean;
   manual?: boolean;
 };
 
@@ -46,8 +47,6 @@ export type Snapshot = {
 };
 
 export type Quotes = Record<string, Quote>;
-
-export type SortDir = 1 | -1;
 
 export type PortfolioSummary = {
   totalValue: number;
@@ -133,6 +132,31 @@ export type RecurringCashFlow = {
   notes?: string | null;
   created_at?: string | null;
   updated_at?: string | null;
+};
+
+export type RecurringCashFlowPayload = {
+  id?: number;
+  name: string;
+  category: string;
+  flow_type?: 'income' | 'expense';
+  cash_account?: string | null;
+  amount: number;
+  start_date: string;
+  cadence: 'biweekly' | 'monthly-first' | string;
+  is_active?: boolean;
+  notes?: string | null;
+};
+
+export type RecurringCashFlowSkip = {
+  id: number;
+  recurring_cash_flow_id: number;
+  due_date: string;
+  created_at?: string | null;
+};
+
+export type RecurringCashFlowSkipPayload = {
+  recurring_cash_flow_id: number;
+  due_date: string;
 };
 
 export type MortgageProfile = {

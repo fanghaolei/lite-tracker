@@ -17,7 +17,9 @@
 - Domain enums: `app/db/enums.py`
 - Service logic: `app/services`
 - Demo seed data: `app/demo/demo_data.py`
-- Frontend pages/components: `ui/src/components`
+- Frontend page orchestration: `ui/src/components/*Page.tsx`
+- Frontend feature components: `ui/src/components/{portfolio,accounts,cash-flow,mortgage}`
+- Frontend domain helpers: `ui/src/domain`
 
 ## Pull Request Checklist
 

@@ -6,8 +6,7 @@ import type {
   Holding,
   PortfolioSummary,
   Quote,
-  Quotes,
-  SortDir
+  Quotes
 } from './types';
 
 export const ASSET_TYPES: AssetType[] = ['stock', 'fund', 'cash equivalents', 'crypto', 'other'];
@@ -123,22 +122,6 @@ export function getAccountAllocations(holdings: Holding[], quotes: Quotes): { ac
     .map(([account, value]) => ({ account, value }))
     .filter(item => item.value > 0)
     .sort((a, b) => b.value - a.value);
-}
-
-export function sortData<T>(data: T[], key: keyof T, dir: SortDir): T[] {
-  return [...data].sort((a, b) => {
-    const left = normalizeSortValue(a[key]);
-    const right = normalizeSortValue(b[key]);
-    if (left < right) return -1 * dir;
-    if (left > right) return 1 * dir;
-    return 0;
-  });
-}
-
-function normalizeSortValue(value: unknown): string | number {
-  if (typeof value === 'string') return value.toLowerCase();
-  if (typeof value === 'number') return value;
-  return 0;
 }
 
 export function buildAssetLot(holding: Holding, quotes: Quotes): AssetLot {

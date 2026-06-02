@@ -32,7 +32,7 @@ This file is a compact technical overview. Use it when you need one page with co
 
 ## Current Test Baseline
 
-- 70 tests passing in `tests/`
+- 83 tests passing in `tests/`
 
 ## Common Commands
 

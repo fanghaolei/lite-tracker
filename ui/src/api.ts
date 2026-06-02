@@ -1,4 +1,4 @@
-import type { AssetType, BrandingSettings, BrandingSettingsPayload, CashFlowItem, CashFlowPayload, HistoryPoint, Holding, HoldingPayload, MortgageEstimateResponse, MortgageProfile, Quotes, RecurringCashFlow, Snapshot } from './types';
+import type { AssetType, BrandingSettings, BrandingSettingsPayload, CashFlowItem, CashFlowPayload, HistoryPoint, Holding, HoldingPayload, MortgageEstimateResponse, MortgageProfile, Quotes, RecurringCashFlow, RecurringCashFlowPayload, RecurringCashFlowSkip, RecurringCashFlowSkipPayload, Snapshot } from './types';
 
 const API_URL = '/api';
 export const BRANDING_CACHE_KEY = 'liteTracker.branding';
@@ -23,6 +23,14 @@ export async function saveHolding(payload: HoldingPayload): Promise<Holding> {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(payload)
+  }));
+}
+
+export async function updateCashBalance(id: number, shares: number): Promise<Holding> {
+  return json<Holding>(await fetch(`${API_URL}/holdings/cash/${id}/balance`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ shares })
   }));
 }
 
@@ -118,6 +126,10 @@ export async function fetchRecurringCashFlows(): Promise<RecurringCashFlow[]> {
   return json<RecurringCashFlow[]>(await fetch(`${API_URL}/cash-flow/recurring`));
 }
 
+export async function fetchRecurringCashFlowSkips(): Promise<RecurringCashFlowSkip[]> {
+  return json<RecurringCashFlowSkip[]>(await fetch(`${API_URL}/cash-flow/recurring/skips`));
+}
+
 export async function saveCashFlowItem(payload: CashFlowPayload): Promise<CashFlowItem> {
   return json<CashFlowItem>(await fetch(`${API_URL}/cash-flow`, {
     method: 'POST',
@@ -138,6 +150,27 @@ export async function updateRecurringCashFlowAccount(id: number, cashAccount: st
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ cash_account: cashAccount })
   }));
+}
+
+export async function saveRecurringCashFlow(payload: RecurringCashFlowPayload): Promise<RecurringCashFlow> {
+  return json<RecurringCashFlow>(await fetch(`${API_URL}/cash-flow/recurring`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload)
+  }));
+}
+
+export async function skipRecurringCashFlowOccurrence(payload: RecurringCashFlowSkipPayload): Promise<RecurringCashFlowSkip> {
+  return json<RecurringCashFlowSkip>(await fetch(`${API_URL}/cash-flow/recurring/skips`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload)
+  }));
+}
+
+export async function deleteRecurringCashFlow(id: number): Promise<boolean> {
+  const res = await fetch(`${API_URL}/cash-flow/recurring/${id}`, { method: 'DELETE' });
+  return res.ok;
 }
 
 export async function fetchMortgageProfile(): Promise<MortgageProfile> {

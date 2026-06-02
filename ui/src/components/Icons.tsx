@@ -46,16 +46,24 @@ export function MoonIcon() {
   );
 }
 
-export function EyeIcon({ hidden }: { hidden: boolean }) {
+export function CheckIcon({ className = 'h-4 w-4' }: { className?: string }) {
+  return (
+    <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor">
+      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7" />
+    </svg>
+  );
+}
+
+export function EyeIcon({ hidden, className }: { hidden: boolean; className?: string }) {
   if (hidden) {
     return (
-      <svg className="h-5 w-5 text-amber-600 dark:text-amber-300" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+      <svg className={className || 'h-5 w-5 text-amber-600 dark:text-amber-300'} fill="none" viewBox="0 0 24 24" stroke="currentColor">
         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 3l18 18M10.58 10.58A2 2 0 0012 14a2 2 0 001.42-.58M9.88 5.58A8.79 8.79 0 0112 5.25c6 0 9.75 6.75 9.75 6.75a17.42 17.42 0 01-3.1 3.82M6.53 6.53C3.8 8.34 2.25 12 2.25 12S6 18.75 12 18.75a8.9 8.9 0 004.13-.99" />
       </svg>
     );
   }
   return (
-    <svg className="h-5 w-5 text-gray-600 dark:text-gray-300" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+    <svg className={className || 'h-5 w-5 text-gray-600 dark:text-gray-300'} fill="none" viewBox="0 0 24 24" stroke="currentColor">
       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M2.25 12s3.75-6.75 9.75-6.75S21.75 12 21.75 12 18 18.75 12 18.75 2.25 12 2.25 12z" />
       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 9.25A2.75 2.75 0 1112 14.75 2.75 2.75 0 0112 9.25z" />
     </svg>

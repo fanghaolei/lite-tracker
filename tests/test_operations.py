@@ -210,6 +210,35 @@ class TestUpdateHolding:
         
         assert result.ticker == "AAPL"
 
+    def test_update_cash_balance(self, db_session):
+        """Should update only CASH holding balances."""
+        cash = models.Holding(
+            ticker="CASH",
+            asset_type="cash equivalents",
+            shares=1000.0,
+            average_cost=1.0,
+            account="Checking",
+            is_manual=True,
+        )
+        stock = models.Holding(
+            ticker="AAPL",
+            asset_type="stock",
+            shares=5.0,
+            average_cost=150.0,
+            account="Brokerage",
+        )
+        db_session.add_all([cash, stock])
+        db_session.commit()
+
+        result = operations.update_cash_balance(db_session, cash.id, 2500.126)
+        rejected = operations.update_cash_balance(db_session, stock.id, 2500.0)
+
+        assert result.shares == 2500.13
+        assert result.asset_type == "cash equivalents"
+        assert result.average_cost == 1
+        assert result.is_manual is False
+        assert rejected is None
+
 
 class TestDeleteHolding:
     """Test holding deletion."""
@@ -412,9 +441,269 @@ class TestCashFlowOperations:
         assert result[1].due_date == date(2024, 2, 3)
         assert result[2].is_paid is True
 
+    def test_settling_expense_updates_cash_and_unsettling_reverses(self, db_session):
+        """Settled expenses should subtract from the associated cash account."""
+        from datetime import date
+
+        cash = models.Holding(
+            ticker="CASH",
+            asset_type="cash equivalents",
+            shares=1000.0,
+            average_cost=1.0,
+            account="Checking"
+        )
+        db_session.add(cash)
+        db_session.commit()
+
+        item = operations.update_cash_flow_item(db_session, schemas.CashFlowItemCreate(
+            name="Card",
+            category="Credit Card",
+            flow_type="expense",
+            cash_account="Checking",
+            amount=125.126,
+            due_date=date(2024, 2, 1),
+            is_paid=False
+        ))
+        assert cash.shares == 1000.0
+
+        operations.update_cash_flow_item(db_session, schemas.CashFlowItemCreate(
+            id=item.id,
+            name="Card",
+            category="Credit Card",
+            flow_type="expense",
+            cash_account="Checking",
+            amount=125.126,
+            due_date=date(2024, 2, 1),
+            is_paid=True
+        ))
+        assert cash.shares == 874.87
+
+        operations.update_cash_flow_item(db_session, schemas.CashFlowItemCreate(
+            id=item.id,
+            name="Card",
+            category="Credit Card",
+            flow_type="expense",
+            cash_account="Checking",
+            amount=125.126,
+            due_date=date(2024, 2, 1),
+            is_paid=False
+        ))
+        assert cash.shares == 1000.0
+
+    def test_settling_income_updates_cash(self, db_session):
+        """Settled income should deposit into the associated cash account."""
+        from datetime import date
+
+        cash = models.Holding(
+            ticker="CASH",
+            asset_type="cash equivalents",
+            shares=1000.0,
+            average_cost=1.0,
+            account="Checking"
+        )
+        db_session.add(cash)
+        db_session.commit()
+
+        operations.update_cash_flow_item(db_session, schemas.CashFlowItemCreate(
+            name="Salary",
+            category="Salary",
+            flow_type="income",
+            cash_account="Checking",
+            amount=500.0,
+            due_date=date(2024, 2, 1),
+            is_paid=True
+        ))
+
+        assert cash.shares == 1500.0
+
+    def test_unsettling_income_reverses_cash(self, db_session):
+        """Unsettled income should remove its prior deposit from cash."""
+        from datetime import date
+
+        cash = models.Holding(
+            ticker="CASH",
+            asset_type="cash equivalents",
+            shares=1000.0,
+            average_cost=1.0,
+            account="Checking"
+        )
+        db_session.add(cash)
+        db_session.commit()
+
+        item = operations.update_cash_flow_item(db_session, schemas.CashFlowItemCreate(
+            name="Salary",
+            category="Salary",
+            flow_type="income",
+            cash_account="Checking",
+            amount=500.0,
+            due_date=date(2024, 2, 1),
+            is_paid=True
+        ))
+        assert cash.shares == 1500.0
+
+        operations.update_cash_flow_item(db_session, schemas.CashFlowItemCreate(
+            id=item.id,
+            name="Salary",
+            category="Salary",
+            flow_type="income",
+            cash_account="Checking",
+            amount=500.0,
+            due_date=date(2024, 2, 1),
+            is_paid=False
+        ))
+
+        assert cash.shares == 1000.0
+
+    def test_deleting_settled_item_reverses_cash_effect(self, db_session):
+        """Deleting a settled item should remove its cash balance effect."""
+        from datetime import date
+
+        cash = models.Holding(
+            ticker="CASH",
+            asset_type="cash equivalents",
+            shares=1000.0,
+            average_cost=1.0,
+            account="Checking"
+        )
+        db_session.add(cash)
+        db_session.commit()
+
+        item = operations.update_cash_flow_item(db_session, schemas.CashFlowItemCreate(
+            name="Card",
+            category="Credit Card",
+            flow_type="expense",
+            cash_account="Checking",
+            amount=125.0,
+            due_date=date(2024, 2, 1),
+            is_paid=True
+        ))
+        assert cash.shares == 875.0
+
+        operations.delete_cash_flow_item(db_session, item.id)
+
+        assert cash.shares == 1000.0
+
+    def test_settled_mortgage_payment_reduces_principal_and_reverses(self, db_session):
+        """Settled mortgage payments should update mortgage principal with a reversible effect."""
+        from datetime import date
+
+        cash = models.Holding(
+            ticker="CASH",
+            asset_type="cash equivalents",
+            shares=5000.0,
+            average_cost=1.0,
+            account="Checking"
+        )
+        profile = models.MortgageProfile(
+            property_address_line1="Test Home",
+            principal_balance=100000.0,
+            original_term_months=360,
+            remaining_term_months=300,
+            annual_interest_rate=0.06,
+            updated_at=datetime.now()
+        )
+        db_session.add_all([cash, profile])
+        db_session.commit()
+
+        item = operations.update_cash_flow_item(db_session, schemas.CashFlowItemCreate(
+            name="Mortgage",
+            category="Mortgage",
+            flow_type="expense",
+            cash_account="Checking",
+            amount=1000.0,
+            due_date=date(2024, 2, 1),
+            is_paid=True
+        ))
+
+        effect = db_session.query(models.MortgagePaymentEffect).filter(
+            models.MortgagePaymentEffect.cash_flow_item_id == item.id
+        ).first()
+        assert cash.shares == 4000.0
+        assert round(profile.principal_balance, 2) == 99500.0
+        assert profile.remaining_term_months == 299
+        assert round(effect.interest_paid, 2) == 500.0
+        assert round(effect.principal_paid, 2) == 500.0
+
+        operations.update_cash_flow_item(db_session, schemas.CashFlowItemCreate(
+            id=item.id,
+            name="Mortgage",
+            category="Mortgage",
+            flow_type="expense",
+            cash_account="Checking",
+            amount=1000.0,
+            due_date=date(2024, 2, 1),
+            is_paid=False
+        ))
+
+        assert cash.shares == 5000.0
+        assert round(profile.principal_balance, 2) == 100000.0
+        assert profile.remaining_term_months == 300
+        assert db_session.query(models.MortgagePaymentEffect).count() == 0
+
 
 class TestRecurringCashFlow:
     """Test recurring cash flow operations."""
+
+    def test_create_recurring_cash_flow(self, db_session):
+        """Should create a recurring cash flow template."""
+        from datetime import date
+
+        payload = schemas.RecurringCashFlowCreate(
+            name="Salary",
+            category="Salary",
+            flow_type="income",
+            amount=5000.0,
+            start_date=date(2024, 1, 4),
+            cadence="biweekly",
+            notes="Primary paycheck"
+        )
+
+        result = operations.update_recurring_cash_flow(db_session, payload)
+
+        assert result.name == "Salary"
+        assert result.flow_type == "income"
+        assert result.cash_account == ""
+        assert result.amount == 5000.0
+        assert result.is_active is True
+
+    def test_update_recurring_cash_flow(self, db_session):
+        """Should update an existing recurring cash flow template."""
+        from datetime import date
+
+        recurring = models.RecurringCashFlow(
+            name="Old Mortgage",
+            category="Mortgage",
+            flow_type="expense",
+            cash_account="Checking",
+            amount=2000.0,
+            start_date=date(2024, 1, 1),
+            cadence="monthly-first",
+            is_active=True,
+            created_at=datetime.now(),
+            updated_at=datetime.now()
+        )
+        db_session.add(recurring)
+        db_session.commit()
+
+        payload = schemas.RecurringCashFlowCreate(
+            id=recurring.id,
+            name="Mortgage",
+            category="Mortgage",
+            flow_type="expense",
+            cash_account="Savings",
+            amount=2200.0,
+            start_date=date(2024, 2, 1),
+            cadence="monthly-first",
+            notes="Updated autopay"
+        )
+
+        result = operations.update_recurring_cash_flow(db_session, payload)
+
+        assert result.id == recurring.id
+        assert result.name == "Mortgage"
+        assert result.cash_account == "Savings"
+        assert result.amount == 2200.0
+        assert result.notes == "Updated autopay"
 
     def test_update_recurring_cash_flow_account(self, db_session):
         """Should update cash account for recurring cash flow."""
@@ -475,3 +764,79 @@ class TestRecurringCashFlow:
         assert len(result) == 1
         assert result[0].name == "Salary"
         assert result[0].is_active is True
+
+    def test_delete_recurring_cash_flow_deactivates_template(self, db_session):
+        """Should soft-delete recurring templates by deactivating them."""
+        from datetime import date
+
+        recurring = models.RecurringCashFlow(
+            name="Old Job",
+            flow_type="income",
+            amount=3000.0,
+            start_date=date(2024, 1, 1),
+            is_active=True,
+            created_at=datetime.now(),
+            updated_at=datetime.now()
+        )
+        db_session.add(recurring)
+        db_session.commit()
+
+        result = operations.delete_recurring_cash_flow(db_session, recurring.id)
+        active_items = operations.get_recurring_cash_flows(db_session)
+
+        assert result is True
+        assert active_items == []
+        assert recurring.is_active is False
+
+    def test_skip_recurring_cash_flow_occurrence(self, db_session):
+        """Should persist a skipped recurring occurrence by date."""
+        from datetime import date
+
+        recurring = models.RecurringCashFlow(
+            name="Salary",
+            flow_type="income",
+            amount=3000.0,
+            start_date=date(2024, 1, 4),
+            cadence="biweekly",
+            is_active=True,
+            created_at=datetime.now(),
+            updated_at=datetime.now()
+        )
+        db_session.add(recurring)
+        db_session.commit()
+
+        skip_date = date(2024, 1, 18)
+        result = operations.skip_recurring_cash_flow_occurrence(
+            db_session,
+            schemas.RecurringCashFlowSkipCreate(
+                recurring_cash_flow_id=recurring.id,
+                due_date=skip_date
+            )
+        )
+        duplicate = operations.skip_recurring_cash_flow_occurrence(
+            db_session,
+            schemas.RecurringCashFlowSkipCreate(
+                recurring_cash_flow_id=recurring.id,
+                due_date=skip_date
+            )
+        )
+        skips = operations.get_recurring_cash_flow_skips(db_session)
+
+        assert result.recurring_cash_flow_id == recurring.id
+        assert result.due_date == skip_date
+        assert duplicate.id == result.id
+        assert len(skips) == 1
+
+    def test_skip_missing_recurring_cash_flow_returns_none(self, db_session):
+        """Should reject skips for missing recurring templates."""
+        from datetime import date
+
+        result = operations.skip_recurring_cash_flow_occurrence(
+            db_session,
+            schemas.RecurringCashFlowSkipCreate(
+                recurring_cash_flow_id=999,
+                due_date=date(2024, 1, 18)
+            )
+        )
+
+        assert result is None

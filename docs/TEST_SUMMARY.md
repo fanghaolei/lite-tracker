@@ -3,7 +3,7 @@
 ## Baseline
 
 - Command: `python -m pytest tests -q`
-- Result: 70 passed
+- Result: 83 passed
 
 ## Modules Covered
 
@@ -15,6 +15,8 @@
   - Snapshot item calculations and serialization.
 - `tests/test_settings_service.py`
   - Branding settings defaults and persistence.
+- `tests/test_quote_service.py`
+  - Quote cache freshness and fallback behavior.
 - `tests/test_demo_data.py`
   - Demo database seed coverage.
 

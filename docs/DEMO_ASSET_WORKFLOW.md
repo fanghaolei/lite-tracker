@@ -55,22 +55,16 @@ Use this workflow when refreshing README screenshots or `docs/assets/demo/demo-p
    }
 
    foreach ($name in $pages.Keys) {
-     & $chrome --headless=new --disable-gpu --hide-scrollbars --window-size=1440,1050 --force-device-scale-factor=1 --user-data-dir=$profile --virtual-time-budget=5000 --screenshot="$PWD\docs\assets\demo\$name" "http://127.0.0.1:8765$($pages[$name])"
+     & $chrome --headless=new --disable-gpu --hide-scrollbars --run-all-compositor-stages-before-draw --window-size=1440,1050 --force-device-scale-factor=1 --user-data-dir=$profile --virtual-time-budget=10000 --screenshot="$PWD\docs\assets\demo\$name" "http://127.0.0.1:8765$($pages[$name])"
    }
    ```
 
-6. Rebuild the GIF from the demo PNGs. Repeat each page frame so the preview is readable, and end on Portfolio:
+6. Rebuild the GIF from the demo PNGs. Set an explicit frame delay so each page is readable, and end on Portfolio:
 
    ```powershell
    Add-Type -AssemblyName PresentationCore
    $out = "$PWD\docs\assets\demo\demo-preview.gif"
-   $sequence = @(
-     'portfolio.png','portfolio.png','portfolio.png',
-     'accounts.png','accounts.png','accounts.png',
-     'cash-flow.png','cash-flow.png','cash-flow.png',
-     'mortgage.png','mortgage.png','mortgage.png',
-     'portfolio.png','portfolio.png','portfolio.png'
-   )
+   $sequence = @('portfolio.png', 'accounts.png', 'cash-flow.png', 'mortgage.png', 'portfolio.png')
    $encoder = New-Object System.Windows.Media.Imaging.GifBitmapEncoder
    foreach ($name in $sequence) {
      $stream = [System.IO.File]::OpenRead("$PWD\docs\assets\demo\$name")
@@ -91,6 +85,61 @@ Use this workflow when refreshing README screenshots or `docs/assets/demo/demo-p
    try { $encoder.Save($outStream) } finally { $outStream.Close() }
    ```
 
+   Inject frame delays after encoding:
+
+   ```powershell
+   @'
+   from pathlib import Path
+
+   path = Path("docs/assets/demo/demo-preview.gif")
+   data = path.read_bytes()
+   delay = 180
+   control = bytes([0x21, 0xF9, 0x04, 0x08, delay & 0xFF, delay >> 8, 0x00, 0x00])
+
+   pos = 13
+   packed = data[10]
+   if packed & 0x80:
+       pos += 3 * (2 ** ((packed & 0x07) + 1))
+   out = bytearray(data[:pos])
+
+   while pos < len(data):
+       marker = data[pos]
+       if marker == 0x3B:
+           out.extend(data[pos:])
+           break
+       if marker == 0x21:
+           start = pos
+           pos += 2
+           while True:
+               size = data[pos]
+               pos += 1
+               if size == 0:
+                   break
+               pos += size
+           out.extend(data[start:pos])
+           continue
+       if marker == 0x2C:
+           out.extend(control)
+           start = pos
+           image_packed = data[pos + 9]
+           pos += 10
+           if image_packed & 0x80:
+               pos += 3 * (2 ** ((image_packed & 0x07) + 1))
+           pos += 1
+           while True:
+               size = data[pos]
+               pos += 1
+               if size == 0:
+                   break
+               pos += size
+           out.extend(data[start:pos])
+           continue
+       raise ValueError(f"Unexpected GIF marker {marker:#x} at {pos}")
+
+   path.write_bytes(out)
+   '@ | python -
+   ```
+
 7. Clean temporary files:
 
    ```powershell
@@ -108,5 +157,6 @@ Use this workflow when refreshing README screenshots or `docs/assets/demo/demo-p
 
 - Screenshots show `Demo Ledger`, not a personal app name.
 - Screenshots contain only fake demo accounts and fake demo values.
+- `demo-preview.gif` uses readable frame timing.
 - `demo-preview.gif` opens and returns to Portfolio at the end.
 - README preview links still point to `docs/assets/demo/demo-preview.gif`.

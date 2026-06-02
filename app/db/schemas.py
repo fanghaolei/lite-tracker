@@ -19,6 +19,9 @@ class HoldingCreate(BaseModel):
     is_manual: bool = False
     manual_price: Optional[float] = None
 
+class CashBalanceUpdate(BaseModel):
+    shares: float
+
 class TickerAssetTypeUpdate(BaseModel):
     asset_type: AssetType
 
@@ -38,6 +41,22 @@ class MortgageEstimateRefresh(BaseModel):
 
 class RecurringCashFlowAccountUpdate(BaseModel):
     cash_account: Optional[str] = ""
+
+class RecurringCashFlowCreate(BaseModel):
+    id: Optional[int] = None
+    name: str
+    category: str = "Bill"
+    flow_type: str = "expense"
+    cash_account: Optional[str] = ""
+    amount: float
+    start_date: date
+    cadence: str = "biweekly"
+    is_active: bool = True
+    notes: Optional[str] = ""
+
+class RecurringCashFlowSkipCreate(BaseModel):
+    recurring_cash_flow_id: int
+    due_date: date
 
 class BrandingSettings(BaseModel):
     app_name: str

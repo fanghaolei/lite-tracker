@@ -29,6 +29,13 @@ def update_holding(holding: schemas.HoldingCreate, db: Session = Depends(get_db)
         sync_ticker_history(db_holding.ticker, db)
     return db_holding
 
+@router.post("/holdings/cash/{holding_id}/balance")
+def update_cash_balance(holding_id: int, payload: schemas.CashBalanceUpdate, db: Session = Depends(get_db)):
+    db_holding = operations.update_cash_balance(db, holding_id, payload.shares)
+    if not db_holding:
+        raise HTTPException(status_code=404, detail="Cash holding not found")
+    return db_holding
+
 @router.get("/holdings")
 def get_holdings(db: Session = Depends(get_db)):
     return operations.get_holdings(db)
@@ -100,12 +107,33 @@ def update_cash_flow_item(item: schemas.CashFlowItemCreate, db: Session = Depend
 def get_recurring_cash_flows(db: Session = Depends(get_db)):
     return operations.get_recurring_cash_flows(db)
 
+@router.get("/cash-flow/recurring/skips")
+def get_recurring_cash_flow_skips(db: Session = Depends(get_db)):
+    return operations.get_recurring_cash_flow_skips(db)
+
+@router.post("/cash-flow/recurring/skips")
+def skip_recurring_cash_flow_occurrence(item: schemas.RecurringCashFlowSkipCreate, db: Session = Depends(get_db)):
+    skip = operations.skip_recurring_cash_flow_occurrence(db, item)
+    if not skip:
+        raise HTTPException(status_code=404, detail="Recurring cash flow not found")
+    return skip
+
 @router.post("/cash-flow/recurring/{item_id}/cash-account")
 def update_recurring_cash_flow_account(item_id: int, payload: schemas.RecurringCashFlowAccountUpdate, db: Session = Depends(get_db)):
     item = operations.update_recurring_cash_flow_account(db, item_id, payload.cash_account or "")
     if not item:
         raise HTTPException(status_code=404, detail="Recurring cash flow not found")
     return item
+
+@router.post("/cash-flow/recurring")
+def update_recurring_cash_flow(item: schemas.RecurringCashFlowCreate, db: Session = Depends(get_db)):
+    return operations.update_recurring_cash_flow(db, item)
+
+@router.delete("/cash-flow/recurring/{item_id}")
+def delete_recurring_cash_flow(item_id: int, db: Session = Depends(get_db)):
+    if not operations.delete_recurring_cash_flow(db, item_id):
+        raise HTTPException(status_code=404, detail="Recurring cash flow not found")
+    return {"status": "success"}
 
 @router.delete("/cash-flow/{item_id}")
 def delete_cash_flow_item(item_id: int, db: Session = Depends(get_db)):

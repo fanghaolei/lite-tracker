@@ -118,6 +118,25 @@ class RecurringCashFlow(Base):
     created_at = Column(DateTime, index=True)
     updated_at = Column(DateTime, index=True)
 
+class RecurringCashFlowSkip(Base):
+    __tablename__ = "recurring_cash_flow_skips"
+    id = Column(Integer, primary_key=True, index=True)
+    recurring_cash_flow_id = Column(Integer, ForeignKey("recurring_cash_flows.id"), index=True)
+    due_date = Column(Date, index=True)
+    created_at = Column(DateTime, index=True)
+
+    __table_args__ = (
+        UniqueConstraint("recurring_cash_flow_id", "due_date", name="uq_recurring_cash_flow_skip_date"),
+    )
+
+class MortgagePaymentEffect(Base):
+    __tablename__ = "mortgage_payment_effects"
+    id = Column(Integer, primary_key=True, index=True)
+    cash_flow_item_id = Column(Integer, ForeignKey("cash_flow_items.id"), unique=True, index=True)
+    principal_paid = Column(Float, default=0.0)
+    interest_paid = Column(Float, default=0.0)
+    applied_at = Column(DateTime, index=True)
+
 class AppSetting(Base):
     __tablename__ = "app_settings"
     key = Column(String, primary_key=True, index=True)

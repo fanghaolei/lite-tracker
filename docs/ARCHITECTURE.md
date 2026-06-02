@@ -6,6 +6,21 @@
 - Data layer: SQLAlchemy + SQLite (`lite-tracker.db`)
 - Frontend: React + TypeScript built by Vite into `static/react`
 
+## Frontend Modules
+
+- `ui/src/components/*Page.tsx`
+  - Page-level data fetching, state, and composition.
+- `ui/src/components/portfolio`
+  - Portfolio form, chart panel, and TanStack tables.
+- `ui/src/components/accounts`
+  - Account allocation chart panel and expandable account table.
+- `ui/src/components/cash-flow`
+  - Cash-flow editor, timeline, resources table, and details table.
+- `ui/src/components/mortgage`
+  - Mortgage equity, payoff, stats, and loan detail panels.
+- `ui/src/domain`
+  - Frontend-only calculations, form defaults, grouping, and formatting helpers.
+
 ## Backend Modules
 
 - `app/api/endpoints.py`
