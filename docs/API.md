@@ -16,9 +16,10 @@ All API routes are under `/api`.
 ## Market Data
 
 - `GET /api/sync`
-  - Sync price history for non-manual holdings.
+  - Force-refresh live quote cache for non-manual, non-cash holdings.
+  - Returns synced tickers and refreshed quotes.
 - `POST /api/quotes`
-  - Fetch live quotes for a ticker list.
+  - Fetch live quotes for a ticker list, using the server-side quote cache when fresh.
 - `GET /api/history`
   - Return YTD portfolio history (snapshot + backfill).
 

@@ -52,3 +52,28 @@ def test_failed_fetch_keeps_stale_good_cache(db_session, monkeypatch):
     assert result["MSFT"]["stale"] is True
     assert row.price == 300.0
     assert row.fetched_at == fetched_at
+
+
+def test_force_refetches_fresh_cache(db_session, monkeypatch):
+    db_session.add(models.QuoteCache(
+        ticker="AAPL",
+        price=150.0,
+        prev_close=149.0,
+        fetched_at=datetime.now()
+    ))
+    db_session.commit()
+
+    monkeypatch.setattr(
+        quotes,
+        "fetch_yahoo_quotes",
+        lambda tickers: {"AAPL": {"price": 155.0, "prev_close": 154.0}},
+    )
+
+    result = quotes.get_live_quotes(["AAPL"], db=db_session, force=True)
+    row = db_session.query(models.QuoteCache).filter(models.QuoteCache.ticker == "AAPL").first()
+
+    assert result["AAPL"]["price"] == 155.0
+    assert result["AAPL"]["prev_close"] == 154.0
+    assert result["AAPL"]["cached"] is False
+    assert row.price == 155.0
+    assert row.prev_close == 154.0

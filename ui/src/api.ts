@@ -1,4 +1,4 @@
-import type { AssetType, BrandingSettings, BrandingSettingsPayload, CashFlowItem, CashFlowPayload, HistoryPoint, Holding, HoldingPayload, MortgageEstimateResponse, MortgageProfile, Quotes, RecurringCashFlow, RecurringCashFlowPayload, RecurringCashFlowSkip, RecurringCashFlowSkipPayload, Snapshot } from './types';
+import type { AssetType, BrandingSettings, BrandingSettingsPayload, CashFlowItem, CashFlowPayload, HistoryPoint, Holding, HoldingPayload, MortgageEstimateResponse, MortgageProfile, Quotes, RecurringCashFlow, RecurringCashFlowPayload, RecurringCashFlowSkip, RecurringCashFlowSkipPayload, Snapshot, SyncResult } from './types';
 
 const API_URL = '/api';
 export const BRANDING_CACHE_KEY = 'liteTracker.branding';
@@ -106,8 +106,8 @@ export function cacheBrandingSettings(settings: BrandingSettings): void {
   }
 }
 
-export function triggerSync(): Promise<Response> {
-  return fetch(`${API_URL}/sync`);
+export async function triggerSync(): Promise<SyncResult> {
+  return json<SyncResult>(await fetch(`${API_URL}/sync`));
 }
 
 export function saveSnapshot(overwrite = false): Promise<Response> {

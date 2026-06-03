@@ -48,6 +48,12 @@ export type Snapshot = {
 
 export type Quotes = Record<string, Quote>;
 
+export type SyncResult = {
+  status: string;
+  tickers: string[];
+  quotes: Quotes;
+};
+
 export type PortfolioSummary = {
   totalValue: number;
   cashVal: number;

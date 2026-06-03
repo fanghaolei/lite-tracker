@@ -64,7 +64,7 @@ Run all tests:
 `python -m pytest tests -v`
 
 Current baseline:
-- 83 tests passing
+- 85 tests passing
 
 ## Documentation
 

@@ -141,10 +141,14 @@ export function PortfolioPage() {
 
   async function handleSync() {
     setBusySync(true);
-    setLastUpdate('Syncing history...');
+    setLastUpdate('Syncing live prices...');
     try {
-      await triggerSync();
+      const result = await triggerSync();
       await refresh();
+      const label = result.tickers.length === 1 ? 'ticker' : 'tickers';
+      setLastUpdate(`Synced ${result.tickers.length} ${label}: ${new Date().toLocaleTimeString()}`);
+    } catch {
+      setLastUpdate('Sync failed');
     } finally {
       setBusySync(false);
     }

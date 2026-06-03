@@ -3,7 +3,7 @@
 ## Baseline
 
 - Command: `python -m pytest tests -q`
-- Result: 83 passed
+- Result: 85 passed
 
 ## Modules Covered
 
@@ -17,6 +17,8 @@
   - Branding settings defaults and persistence.
 - `tests/test_quote_service.py`
   - Quote cache freshness and fallback behavior.
+- `tests/test_sync_endpoint.py`
+  - Sync endpoint live quote refresh and quote-cache persistence.
 - `tests/test_demo_data.py`
   - Demo database seed coverage.
 

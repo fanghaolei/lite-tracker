@@ -11,7 +11,7 @@
 
 ## Current Status
 
-- Test suite: 83 tests
+- Test suite: 85 tests
 - Result: passing
 
 ## Scope
@@ -20,6 +20,7 @@
 - `tests/test_operations.py`
 - `tests/test_demo_data.py`
 - `tests/test_quote_service.py`
+- `tests/test_sync_endpoint.py`
 - `tests/test_settings_service.py`
 - `tests/test_snapshot_service.py`
 
