@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState, type FormEvent } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState, type FormEvent } from 'react';
 import {
   deleteHolding,
   fetchHistory,
@@ -26,6 +26,8 @@ import { PortfolioChartsPanel } from './portfolio/PortfolioChartsPanel';
 import { PortfolioForm } from './portfolio/PortfolioForm';
 import { CashTable, PortfolioTable } from './portfolio/PortfolioTables';
 
+const PORTFOLIO_SPLIT_BY_TYPE_KEY = 'liteTracker.portfolio.splitByType';
+
 export function PortfolioPage() {
   const [theme, toggleTheme] = useTheme();
   const [privacyMode, togglePrivacy] = usePrivacyMode();
@@ -40,8 +42,13 @@ export function PortfolioPage() {
   const [selectedSnapshotDate, setSelectedSnapshotDate] = useState('');
   const [busySync, setBusySync] = useState(false);
   const [busySnapshot, setBusySnapshot] = useState(false);
-  const [splitByType, setSplitByType] = useState(false);
+  const [splitByType, setSplitByType] = useState(() => readSplitByTypePreference());
   const [pieMode, setPieMode] = useState<'ticker' | 'type'>('ticker');
+  const selectedSnapshotDateRef = useRef(selectedSnapshotDate);
+
+  useEffect(() => {
+    selectedSnapshotDateRef.current = selectedSnapshotDate;
+  }, [selectedSnapshotDate]);
 
   const refresh = useCallback(async () => {
     try {
@@ -56,12 +63,11 @@ export function PortfolioPage() {
       setHistory(nextHistory);
       setSnapshots(nextSnapshots);
       setQuotes({ CASH: { price: 1, prev_close: 1 }, ...nextQuotes });
-      if (nextHistory.length === 0 && nextHoldings.length > 0) triggerSync().then(refresh);
-      setLastUpdate(selectedSnapshotDate ? lastUpdate : `Synced: ${new Date().toLocaleTimeString()}`);
+      if (!selectedSnapshotDateRef.current) setLastUpdate(`Synced: ${new Date().toLocaleTimeString()}`);
     } catch {
       setLastUpdate('Connection Error');
     }
-  }, [lastUpdate, selectedSnapshotDate]);
+  }, []);
 
   useEffect(() => {
     refresh();
@@ -72,6 +78,24 @@ export function PortfolioPage() {
   const summary = useMemo(() => calculateSummary(holdings, quotes), [holdings, quotes]);
   const { groups, cashHoldings, totalValue } = useMemo(() => buildAssetGroups(holdings, quotes), [holdings, quotes]);
   const pieAllocations = useMemo(() => buildPortfolioPieAllocations(groups, summary.cashVal, pieMode), [groups, pieMode, summary.cashVal]);
+  const togglePieMode = useCallback(() => {
+    setPieMode(current => current === 'ticker' ? 'type' : 'ticker');
+  }, []);
+  const cancelEdit = useCallback(() => setEditingId(null), []);
+  const clearForm = useCallback(() => setForm(emptyPortfolioForm), []);
+  const addCashLot = useCallback(() => {
+    setForm({ ...emptyPortfolioForm, ticker: 'CASH', asset_type: 'cash equivalents' });
+  }, []);
+  const toggleTicker = useCallback((ticker: string) => {
+    setExpandedTickers(current => current.includes(ticker) ? current.filter(item => item !== ticker) : [...current, ticker]);
+  }, []);
+  const toggleSplitByType = useCallback(() => {
+    setSplitByType(current => {
+      const next = !current;
+      saveSplitByTypePreference(next);
+      return next;
+    });
+  }, []);
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -97,11 +121,11 @@ export function PortfolioPage() {
     }
   }
 
-  async function handleDelete(ticker: string, account: string) {
+  const handleDelete = useCallback(async (ticker: string, account: string) => {
     if (await deleteHolding(ticker, account)) await refresh();
-  }
+  }, [refresh]);
 
-  async function handleInlineSave(lot: Holding) {
+  const handleInlineSave = useCallback(async (lot: Holding) => {
     const account = lot.account.trim();
     const shares = Number(lot.shares);
     const averageCost = Number(lot.average_cost);
@@ -127,9 +151,9 @@ export function PortfolioPage() {
     } catch (error) {
       setLastUpdate(saveErrorMessage(error));
     }
-  }
+  }, [refresh]);
 
-  async function handleTickerTypeChange(ticker: string, assetType: AssetType) {
+  const handleTickerTypeChange = useCallback(async (ticker: string, assetType: AssetType) => {
     try {
       await updateTickerAssetType(ticker, assetType);
       setLastUpdate('Asset type saved');
@@ -137,7 +161,7 @@ export function PortfolioPage() {
     } catch (error) {
       setLastUpdate(saveErrorMessage(error));
     }
-  }
+  }, [refresh]);
 
   async function handleSync() {
     setBusySync(true);
@@ -184,7 +208,7 @@ export function PortfolioPage() {
     if (snapshot) setLastUpdate(`Snapshot ${snapshot.date}: ${wholeMoney(snapshot.total_value || 0)}`);
   }
 
-  function addAccountLot(ticker: string) {
+  const addAccountLot = useCallback((ticker: string) => {
     const existing = holdings.find(h => h.ticker === ticker && h.is_manual);
     setForm({
       ticker,
@@ -196,7 +220,7 @@ export function PortfolioPage() {
       manual_price: existing?.manual_price ? String(existing.manual_price) : ''
     });
     document.getElementById('position-form')?.scrollIntoView({ behavior: 'smooth', block: 'center' });
-  }
+  }, [holdings]);
 
   const controls = (
     <>
@@ -206,7 +230,7 @@ export function PortfolioPage() {
       <button type="button" onClick={() => handleSnapshotSave()} disabled={busySnapshot} className="text-xs font-bold text-amber-700 dark:text-amber-200 bg-amber-50 dark:bg-amber-900/20 px-3 py-1.5 rounded-full hover:bg-amber-100 transition-colors">
         {busySnapshot ? 'Snapshotting...' : 'Update Snapshot'}
       </button>
-      <button type="button" onClick={() => setSplitByType(current => !current)} className="text-xs font-bold text-blue-700 dark:text-blue-200 bg-blue-50 dark:bg-blue-900/20 px-3 py-1.5 rounded-full hover:bg-blue-100 dark:hover:bg-blue-900/40 transition-colors">
+      <button type="button" onClick={toggleSplitByType} className="text-xs font-bold text-blue-700 dark:text-blue-200 bg-blue-50 dark:bg-blue-900/20 px-3 py-1.5 rounded-full hover:bg-blue-100 dark:hover:bg-blue-900/40 transition-colors">
         {splitByType ? 'Single Table' : 'By Type'}
       </button>
       <select value={selectedSnapshotDate} onChange={event => handleSnapshotSelect(event.target.value)} className="text-xs font-semibold text-gray-500 dark:text-gray-200 bg-gray-100 dark:bg-gray-800 border-none rounded-full px-3 py-1.5 focus:ring-2 focus:ring-emerald-500 transition-all duration-200 text-center">
@@ -239,7 +263,7 @@ export function PortfolioPage() {
         privacyMode={privacyMode}
         themeSignal={theme}
         pieMode={pieMode}
-        onTogglePieMode={() => setPieMode(current => current === 'ticker' ? 'type' : 'ticker')}
+        onTogglePieMode={togglePieMode}
       />
 
       <div className="grid grid-cols-1 xl:grid-cols-[minmax(0,1fr)_22rem] gap-4 mb-4 items-start">
@@ -249,16 +273,16 @@ export function PortfolioPage() {
           editingId={editingId}
           onEdit={setEditingId}
           onSave={handleInlineSave}
-          onCancel={() => setEditingId(null)}
+          onCancel={cancelEdit}
           onDelete={handleDelete}
-          onAddCash={() => setForm({ ...emptyPortfolioForm, ticker: 'CASH', asset_type: 'cash equivalents' })}
+          onAddCash={addCashLot}
         />
 
         <PortfolioForm
           form={form}
           onChange={setForm}
           onSubmit={handleSubmit}
-          onClear={() => setForm(emptyPortfolioForm)}
+          onClear={clearForm}
         />
       </div>
 
@@ -267,17 +291,29 @@ export function PortfolioPage() {
           {groupByAssetType(groups).map(section => (
             <section key={section.type}>
               <h2 className="mb-3 text-xs font-black uppercase tracking-widest text-emerald-600">{formatAssetType(section.type)}</h2>
-              <PortfolioTable groups={section.groups} expandedTickers={expandedTickers} editingId={editingId} onToggle={toggleTicker} onAddLot={addAccountLot} onTypeChange={handleTickerTypeChange} onEdit={setEditingId} onSave={handleInlineSave} onCancel={() => setEditingId(null)} onDelete={handleDelete} />
+              <PortfolioTable groups={section.groups} expandedTickers={expandedTickers} editingId={editingId} onToggle={toggleTicker} onAddLot={addAccountLot} onTypeChange={handleTickerTypeChange} onEdit={setEditingId} onSave={handleInlineSave} onCancel={cancelEdit} onDelete={handleDelete} />
             </section>
           ))}
         </div>
       ) : (
-        <PortfolioTable groups={groups} expandedTickers={expandedTickers} editingId={editingId} onToggle={toggleTicker} onAddLot={addAccountLot} onTypeChange={handleTickerTypeChange} onEdit={setEditingId} onSave={handleInlineSave} onCancel={() => setEditingId(null)} onDelete={handleDelete} />
+        <PortfolioTable groups={groups} expandedTickers={expandedTickers} editingId={editingId} onToggle={toggleTicker} onAddLot={addAccountLot} onTypeChange={handleTickerTypeChange} onEdit={setEditingId} onSave={handleInlineSave} onCancel={cancelEdit} onDelete={handleDelete} />
       )}
     </div>
   );
+}
 
-  function toggleTicker(ticker: string) {
-    setExpandedTickers(current => current.includes(ticker) ? current.filter(item => item !== ticker) : [...current, ticker]);
+function readSplitByTypePreference() {
+  try {
+    return sessionStorage.getItem(PORTFOLIO_SPLIT_BY_TYPE_KEY) === 'true';
+  } catch {
+    return false;
+  }
+}
+
+function saveSplitByTypePreference(value: boolean) {
+  try {
+    sessionStorage.setItem(PORTFOLIO_SPLIT_BY_TYPE_KEY, String(value));
+  } catch {
+    // Session storage can be unavailable in privacy-restricted contexts.
   }
 }

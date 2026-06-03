@@ -52,12 +52,7 @@ def delete_holding(ticker: str, account: str = Query(...), db: Session = Depends
 
 @router.get("/sync")
 def sync_all(db: Session = Depends(get_db)):
-    holdings = operations.get_holdings(db)
-    tickers = sorted({
-        holding.ticker
-        for holding in holdings
-        if holding.ticker != "CASH" and not holding.is_manual
-    })
+    tickers = operations.get_live_quote_tickers(db)
     quotes = {}
     if tickers:
         quotes = fetch_live_quotes(tickers, db=db, force=True)

@@ -1,4 +1,4 @@
-import { Fragment, useMemo, useState, type ReactNode } from 'react';
+import { Fragment, memo, useMemo, useState, type ReactNode } from 'react';
 import {
   createColumnHelper,
   flexRender,
@@ -16,7 +16,7 @@ import { ChevronIcon, EditIcon, PlusIcon, TrashIcon } from '../Icons';
 const portfolioColumn = createColumnHelper<AssetGroup>();
 const cashColumn = createColumnHelper<Holding>();
 
-export function CashTable(props: {
+export const CashTable = memo(function CashTable(props: {
   cashHoldings: Holding[];
   totalValue: number;
   editingId: number | null;
@@ -26,7 +26,7 @@ export function CashTable(props: {
   onDelete: (ticker: string, account: string) => void;
   onAddCash: () => void;
 }) {
-  const [sorting, setSorting] = useState<SortingState>([{ id: 'account', desc: false }]);
+  const [sorting, setSorting] = useState<SortingState>([{ id: 'shares', desc: true }]);
   const columns = useMemo(() => buildCashColumns(props.totalValue, props.onAddCash, props.onEdit, props.onDelete), [props.onAddCash, props.onDelete, props.onEdit, props.totalValue]);
   const table = useReactTable({
     data: props.cashHoldings,
@@ -69,9 +69,9 @@ export function CashTable(props: {
       </table>
     </div>
   );
-}
+});
 
-export function PortfolioTable(props: {
+export const PortfolioTable = memo(function PortfolioTable(props: {
   groups: AssetGroup[];
   expandedTickers: string[];
   editingId: number | null;
@@ -83,7 +83,7 @@ export function PortfolioTable(props: {
   onCancel: () => void;
   onDelete: (ticker: string, account: string) => void;
 }) {
-  const [sorting, setSorting] = useState<SortingState>([{ id: 'ticker', desc: false }]);
+  const [sorting, setSorting] = useState<SortingState>([{ id: 'market_value', desc: true }]);
   const columns = useMemo(() => buildPortfolioColumns(props.expandedTickers, props.onAddLot, props.onTypeChange), [props.expandedTickers, props.onAddLot, props.onTypeChange]);
   const table = useReactTable({
     data: props.groups,
@@ -133,7 +133,7 @@ export function PortfolioTable(props: {
       </table>
     </div>
   );
-}
+});
 
 function buildCashColumns(totalValue: number, onAddCash: () => void, onEdit: (id: number) => void, onDelete: (ticker: string, account: string) => void) {
   return [

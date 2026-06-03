@@ -1,5 +1,8 @@
-from sqlalchemy.orm import Session
 from datetime import datetime
+
+from sqlalchemy import or_
+from sqlalchemy.orm import Session
+
 from app.db import models
 from app.db import schemas
 from app.db.enums import normalize_asset_type
@@ -61,6 +64,13 @@ def apply_ticker_asset_types(db: Session, holdings):
 
 def get_holdings(db: Session):
     return apply_ticker_asset_types(db, db.query(models.Holding).all())
+
+def get_live_quote_tickers(db: Session):
+    rows = db.query(models.Holding.ticker).filter(
+        models.Holding.ticker != "CASH",
+        or_(models.Holding.is_manual.is_(False), models.Holding.is_manual.is_(None))
+    ).distinct().all()
+    return sorted({row.ticker.upper() for row in rows if row.ticker})
 
 def update_holding(db: Session, holding: schemas.HoldingCreate):
     db_holding = None
@@ -126,8 +136,8 @@ def update_cash_balance(db: Session, holding_id: int, shares: float):
 
 def update_ticker_asset_type(db: Session, ticker: str, asset_type: str):
     normalized_ticker = ticker.upper()
-    has_holding = db.query(models.Holding).filter(models.Holding.ticker == normalized_ticker).first()
-    is_manual = bool(has_holding.is_manual) if has_holding else False
+    holding_state = db.query(models.Holding.is_manual).filter(models.Holding.ticker == normalized_ticker).first()
+    is_manual = bool(holding_state[0]) if holding_state else False
     row = set_ticker_asset_type(db, normalized_ticker, asset_type, is_manual)
     db.commit()
     db.refresh(row)
@@ -142,8 +152,11 @@ def delete_holding(db: Session, ticker: str, account: str = None):
     db_holding = query.first()
     if db_holding:
         # Only delete history if this is the last lot for this ticker
-        remaining = db.query(models.Holding).filter(models.Holding.ticker == ticker.upper(), models.Holding.id != db_holding.id).count()
-        if remaining == 0:
+        remaining = db.query(models.Holding.id).filter(
+            models.Holding.ticker == ticker.upper(),
+            models.Holding.id != db_holding.id
+        ).first()
+        if not remaining:
             db.query(models.History).filter(models.History.ticker == ticker.upper()).delete()
             
         db.delete(db_holding)

@@ -1,5 +1,6 @@
+import { memo } from 'react';
 import type { AssetType, HistoryPoint } from '../../types';
-import { PortfolioAllocationPieChart, PortfolioLineChart } from '../Charts';
+import { PortfolioAllocationPieChart, PortfolioLineChart } from '../charts/PortfolioCharts';
 import { PieModeIcon } from '../Icons';
 
 type PortfolioChartsPanelProps = {
@@ -11,7 +12,7 @@ type PortfolioChartsPanelProps = {
   onTogglePieMode: () => void;
 };
 
-export function PortfolioChartsPanel({
+export const PortfolioChartsPanel = memo(function PortfolioChartsPanel({
   history,
   allocations,
   privacyMode,
@@ -45,4 +46,4 @@ export function PortfolioChartsPanel({
       </div>
     </div>
   );
-}
+});

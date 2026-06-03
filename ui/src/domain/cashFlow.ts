@@ -72,12 +72,14 @@ export function buildProjectedItems(items: DisplayCashFlowItem[], startingBalanc
     });
 }
 
-export function isSameOccurrence(item: CashFlowItem, automaticItem: DisplayCashFlowItem) {
-  return item.due_date === automaticItem.due_date
-    && item.name === automaticItem.name
-    && item.category === automaticItem.category
-    && (item.flow_type || 'expense') === (automaticItem.flow_type || 'expense')
-    && Math.abs(item.amount - automaticItem.amount) < 0.001;
+export function cashFlowOccurrenceKey(item: Pick<CashFlowItem, 'due_date' | 'name' | 'category' | 'flow_type' | 'amount'>) {
+  return [
+    item.due_date,
+    item.name,
+    item.category,
+    item.flow_type || 'expense',
+    Math.round(item.amount * 1000)
+  ].join('|');
 }
 
 export function buildRecurringItems(

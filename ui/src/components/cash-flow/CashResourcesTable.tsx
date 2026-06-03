@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
+import { memo, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import {
   createColumnHelper,
   flexRender,
@@ -31,7 +31,7 @@ type CashResourcesTableProps = {
   onShowHidden: () => void;
 };
 
-export function CashResourcesTable({
+export const CashResourcesTable = memo(function CashResourcesTable({
   cashAccounts,
   visibleCashAccounts,
   hiddenCashAccounts,
@@ -95,7 +95,7 @@ export function CashResourcesTable({
       </div>
     </section>
   );
-}
+});
 
 function buildCashResourceColumns(
   onSaveBalance: (account: Holding, value: string) => Promise<void> | void,

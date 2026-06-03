@@ -1,5 +1,6 @@
+import { memo } from 'react';
 import type { DisplayCashFlowItem } from '../../domain/cashFlow';
-import { CashFlowTimelineChart } from '../Charts';
+import { CashFlowTimelineChart } from '../charts/CashFlowCharts';
 
 const calendarIcon = String.fromCodePoint(0x1F4C5);
 
@@ -11,7 +12,7 @@ type CashFlowTimelinePanelProps = {
   timelineWidth: string;
 };
 
-export function CashFlowTimelinePanel({
+export const CashFlowTimelinePanel = memo(function CashFlowTimelinePanel({
   items,
   privacyMode,
   themeSignal,
@@ -35,4 +36,4 @@ export function CashFlowTimelinePanel({
       </section>
     </div>
   );
-}
+});

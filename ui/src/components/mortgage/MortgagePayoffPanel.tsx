@@ -1,7 +1,7 @@
 import { formatMortgageDate, mortgageIcons, type MortgagePayoff } from '../../domain/mortgage';
 import { money } from '../../finance';
 import type { MortgageProfile } from '../../types';
-import { MortgagePayoffChart } from '../Charts';
+import { MortgagePayoffChart } from '../charts/MortgageCharts';
 import { DetailTile } from './MortgageTiles';
 
 type MortgagePayoffPanelProps = {

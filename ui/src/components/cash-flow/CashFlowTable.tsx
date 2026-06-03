@@ -1,4 +1,4 @@
-import { useMemo, useState, type ReactNode } from 'react';
+import { memo, useMemo, useState, type ReactNode } from 'react';
 import {
   createColumnHelper,
   flexRender,
@@ -27,7 +27,7 @@ type CashFlowTableProps = {
   onDelete: (item: DisplayCashFlowItem) => void;
 };
 
-export function CashFlowTable({
+export const CashFlowTable = memo(function CashFlowTable({
   items,
   cashAccounts,
   onAccountChange,
@@ -85,7 +85,7 @@ export function CashFlowTable({
       </div>
     </section>
   );
-}
+});
 
 function buildColumns(
   cashAccounts: Holding[],

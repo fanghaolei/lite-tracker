@@ -42,17 +42,27 @@ def update_branding_settings(db: Session, payload: schemas.BrandingSettingsUpdat
     ensure_settings_table(db)
     updates = payload.model_dump(exclude_unset=True)
     now = datetime.now()
+    rows = (
+        db.query(models.AppSetting)
+        .filter(models.AppSetting.key.in_(BRANDING_KEYS))
+        .all()
+    )
+    rows_by_key = {row.key: row for row in rows}
 
     for key in BRANDING_KEYS:
         if key not in updates:
             continue
-        row = db.query(models.AppSetting).filter(models.AppSetting.key == key).first()
+        row = rows_by_key.get(key)
         value = updates[key] or ""
         if row:
             row.value = value
             row.updated_at = now
         else:
-            db.add(models.AppSetting(key=key, value=value, updated_at=now))
+            row = models.AppSetting(key=key, value=value, updated_at=now)
+            db.add(row)
+            rows_by_key[key] = row
 
     db.commit()
-    return get_branding_settings(db)
+    values = DEFAULT_BRANDING.copy()
+    values.update({key: row.value for key, row in rows_by_key.items() if row.value is not None})
+    return schemas.BrandingSettings(**values)

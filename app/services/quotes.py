@@ -81,9 +81,7 @@ def get_live_quotes(tickers: list, db: Session = None, force: bool = False):
             quote = fetched.get(ticker, {"price": 0, "prev_close": 0})
             price = quote.get("price", 0)
             prev_close = quote.get("prev_close", 0)
-            row = cached_by_ticker.get(ticker) or db.query(models.QuoteCache).filter(
-                models.QuoteCache.ticker == ticker
-            ).first()
+            row = cached_by_ticker.get(ticker)
 
             if _is_valid_quote(price):
                 if row:
@@ -91,7 +89,9 @@ def get_live_quotes(tickers: list, db: Session = None, force: bool = False):
                     row.prev_close = prev_close
                     row.fetched_at = now
                 else:
-                    db.add(models.QuoteCache(ticker=ticker, price=price, prev_close=prev_close, fetched_at=now))
+                    row = models.QuoteCache(ticker=ticker, price=price, prev_close=prev_close, fetched_at=now)
+                    db.add(row)
+                    cached_by_ticker[ticker] = row
                 quotes[ticker] = {"price": price, "prev_close": prev_close, "cached": False}
                 changed = True
             elif row and _is_valid_quote(row.price):

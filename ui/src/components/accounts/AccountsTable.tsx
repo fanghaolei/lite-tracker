@@ -28,7 +28,7 @@ type AccountsTableProps = {
 };
 
 export function AccountsTable({ groups }: AccountsTableProps) {
-  const [sorting, setSorting] = useState<SortingState>([{ id: 'account', desc: false }]);
+  const [sorting, setSorting] = useState<SortingState>([{ id: 'market_value', desc: true }]);
   const [expandedAccounts, setExpandedAccounts] = useState<string[]>([]);
   const columns = useMemo(() => buildAccountColumns(expandedAccounts), [expandedAccounts]);
   const table = useReactTable({

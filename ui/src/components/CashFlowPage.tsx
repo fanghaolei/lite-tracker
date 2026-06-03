@@ -16,12 +16,12 @@ import {
   addDaysIso,
   buildProjectedItems,
   buildRecurringItems,
+  cashFlowOccurrenceKey,
   createEmptyCashFlowForm,
   expenseCategories,
   formatDateRange,
   formatShortDate,
   incomeCategories,
-  isSameOccurrence,
   parseCashBalanceDraft,
   readCollapsedCashAccounts,
   RECURRING_HORIZON_DAYS,
@@ -84,10 +84,13 @@ export function CashFlowPage() {
     [recurringItems, recurringSkips]
   );
 
-  const displayItems = useMemo<DisplayCashFlowItem[]>(() => [
-    ...items,
-    ...automaticItems.filter(autoItem => !items.some(item => isSameOccurrence(item, autoItem)))
-  ].sort((a, b) => Number(a.is_paid) - Number(b.is_paid) || a.due_date.localeCompare(b.due_date) || a.name.localeCompare(b.name)), [items, automaticItems]);
+  const displayItems = useMemo<DisplayCashFlowItem[]>(() => {
+    const savedOccurrenceKeys = new Set(items.map(cashFlowOccurrenceKey));
+    return [
+      ...items,
+      ...automaticItems.filter(autoItem => !savedOccurrenceKeys.has(cashFlowOccurrenceKey(autoItem)))
+    ].sort((a, b) => Number(a.is_paid) - Number(b.is_paid) || a.due_date.localeCompare(b.due_date) || a.name.localeCompare(b.name));
+  }, [items, automaticItems]);
 
   const cashAccounts = useMemo(() => holdings
     .filter(holding => holding.ticker === 'CASH')
@@ -157,7 +160,7 @@ export function CashFlowPage() {
     await refresh();
   }
 
-  async function handleTogglePaid(item: DisplayCashFlowItem) {
+  const handleTogglePaid = useCallback(async (item: DisplayCashFlowItem) => {
     if (item.automatic) {
       await saveCashFlowItem({
         name: item.name,
@@ -174,9 +177,9 @@ export function CashFlowPage() {
     }
     await saveCashFlowItem({ ...item, is_paid: !item.is_paid });
     await refresh();
-  }
+  }, [refresh]);
 
-  function handleEdit(item: DisplayCashFlowItem) {
+  const handleEdit = useCallback((item: DisplayCashFlowItem) => {
     if (item.automatic) {
       const template = recurringItems.find(recurring => recurring.id === item.recurring_id);
       if (template) {
@@ -213,17 +216,17 @@ export function CashFlowPage() {
       notes: item.notes || ''
     });
     document.getElementById('cash-flow-form')?.scrollIntoView({ behavior: 'smooth', block: 'center' });
-  }
+  }, [recurringItems]);
 
-  async function handleDelete(item: DisplayCashFlowItem) {
+  const handleDelete = useCallback(async (item: DisplayCashFlowItem) => {
     if (item.automatic) {
       setDeleteChoice({ item });
       return;
     }
     if (await deleteCashFlowItem(item.id, item.name)) await refresh();
-  }
+  }, [refresh]);
 
-  async function handleDeleteSingleAutoOccurrence() {
+  const handleDeleteSingleAutoOccurrence = useCallback(async () => {
     const item = deleteChoice?.item;
     if (!item?.recurring_id) return;
     await skipRecurringCashFlowOccurrence({
@@ -232,18 +235,18 @@ export function CashFlowPage() {
     });
     setDeleteChoice(null);
     await refresh();
-  }
+  }, [deleteChoice, refresh]);
 
-  async function handleDeleteEntireAutoFlow() {
+  const handleDeleteEntireAutoFlow = useCallback(async () => {
     const item = deleteChoice?.item;
     if (!item?.recurring_id) return;
     if (await deleteRecurringCashFlow(item.recurring_id)) {
       setDeleteChoice(null);
       await refresh();
     }
-  }
+  }, [deleteChoice, refresh]);
 
-  async function handleAccountChange(item: DisplayCashFlowItem, account: string) {
+  const handleAccountChange = useCallback(async (item: DisplayCashFlowItem, account: string) => {
     if (item.automatic) {
       if (item.recurring_id) {
         await updateRecurringCashFlowAccount(item.recurring_id, account);
@@ -253,20 +256,24 @@ export function CashFlowPage() {
     }
     await saveCashFlowItem({ ...item, cash_account: account });
     await refresh();
-  }
+  }, [refresh]);
 
-  async function handleCashBalanceSave(account: Holding, value: string) {
+  const handleCashBalanceSave = useCallback(async (account: Holding, value: string) => {
     const nextBalance = parseCashBalanceDraft(value);
     if (!Number.isFinite(nextBalance) || nextBalance < 0) return;
     await updateCashBalance(account.id, nextBalance);
     await refresh();
-  }
+  }, [refresh]);
 
-  function toggleCashAccountCollapsed(account: string) {
+  const toggleCashAccountCollapsed = useCallback((account: string) => {
     setCollapsedCashAccounts(current => current.includes(account)
       ? current.filter(item => item !== account)
       : [...current, account]);
-  }
+  }, []);
+
+  const showHiddenCashAccounts = useCallback(() => {
+    setCollapsedCashAccounts([]);
+  }, []);
 
   const stats = (
     <>
@@ -307,7 +314,7 @@ export function CashFlowPage() {
             hiddenCashTotal={hiddenCashTotal}
             onSaveBalance={handleCashBalanceSave}
             onHideAccount={toggleCashAccountCollapsed}
-            onShowHidden={() => setCollapsedCashAccounts([])}
+            onShowHidden={showHiddenCashAccounts}
           />
 
           <CashFlowEditor

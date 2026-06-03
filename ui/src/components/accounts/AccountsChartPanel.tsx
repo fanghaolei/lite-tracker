@@ -1,4 +1,4 @@
-import { AccountDoughnutChart } from '../Charts';
+import { AccountDoughnutChart } from '../charts/AccountCharts';
 
 type AccountsChartPanelProps = {
   allocations: { account: string; value: number }[];

@@ -75,7 +75,7 @@ def fetch_property_estimate(source: str, url: str):
     return parse_property_estimate(source, html)
 
 
-def upsert_property_estimate(db: Session, source: str, value: float, url: str, estimate_date=None):
+def upsert_property_estimate(db: Session, source: str, value: float, url: str, estimate_date=None, commit: bool = True):
     estimate_date = estimate_date or datetime.now().date()
     row = db.query(models.PropertyEstimate).filter(
         models.PropertyEstimate.source == source,
@@ -87,13 +87,16 @@ def upsert_property_estimate(db: Session, source: str, value: float, url: str, e
     else:
         row = models.PropertyEstimate(source=source, value=value, date=estimate_date, url=url)
         db.add(row)
-    db.commit()
-    db.refresh(row)
+    if commit:
+        db.commit()
+        db.refresh(row)
+    else:
+        db.flush()
     return row
 
 
 def get_property_estimate_sources(db: Session):
-    rows = db.query(models.PropertyEstimate).order_by(
+    rows = db.query(models.PropertyEstimate.source, models.PropertyEstimate.url).order_by(
         models.PropertyEstimate.source.asc(),
         models.PropertyEstimate.date.desc()
     ).all()
@@ -167,8 +170,14 @@ def refresh_property_estimates(db: Session, force: bool = True):
             source_config["source"],
             value,
             source_config["url"],
-            estimate_date=today
+            estimate_date=today,
+            commit=False
         ))
+
+    if refreshed:
+        db.commit()
+        for row in refreshed:
+            db.refresh(row)
 
     return {
         "profile": profile,
