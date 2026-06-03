@@ -19,6 +19,7 @@ __pycache__/
 .tmp/
 htmlcov/
 .coverage
+.skills/
 
 # Frontend build/cache artifacts
 .vite/
