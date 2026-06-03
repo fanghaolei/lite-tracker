@@ -10,7 +10,6 @@ import {
 import { money, wholeMoney } from '../finance';
 import { usePrivacyMode, useTheme } from '../hooks';
 import { Header } from './Header';
-import { MortgageDetailsPanel } from './mortgage/MortgageDetailsPanel';
 import { MortgageEquityPanel } from './mortgage/MortgageEquityPanel';
 import { MortgagePayoffPanel } from './mortgage/MortgagePayoffPanel';
 import { MortgageStatsGrid } from './mortgage/MortgageStatsGrid';
@@ -86,8 +85,7 @@ export function MortgagePage() {
 
       <MortgageStatsGrid profile={profile} metrics={metrics} />
       <MortgageEquityPanel profile={profile} estimateData={estimateData} estimate={estimate} metrics={metrics} loadingEstimate={loadingEstimate} />
-      <MortgagePayoffPanel payoff={payoff} profile={profile} privacyMode={privacyMode} themeSignal={theme} />
-      <MortgageDetailsPanel profile={profile} metrics={metrics} />
+      <MortgagePayoffPanel payoff={payoff} profile={profile} metrics={metrics} privacyMode={privacyMode} themeSignal={theme} />
     </div>
   );
 }

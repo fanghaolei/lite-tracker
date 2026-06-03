@@ -43,6 +43,8 @@ import { SummaryTile } from './cash-flow/CashFlowShared';
 import { DeleteAutoFlowDialog } from './cash-flow/DeleteAutoFlowDialog';
 import { Header } from './Header';
 
+const CASH_FLOW_SUMMARY_WINDOW_DAYS = 30;
+
 export function CashFlowPage() {
   const [theme, toggleTheme] = useTheme();
   const [privacyMode, togglePrivacy] = usePrivacyMode();
@@ -105,12 +107,17 @@ export function CashFlowPage() {
   const timelineWidth = `${Math.max(1120, Math.max(1, timelineDateCount) * 120)}px`;
   const totalCash = useMemo(() => cashAccounts.reduce((sum, item) => sum + item.shares, 0), [cashAccounts]);
   const openItems = useMemo(() => displayItems.filter(item => !item.is_paid), [displayItems]);
-  const projectedOutflow = useMemo(() => openItems
+  const summaryWindowStart = todayIso();
+  const summaryWindowEnd = addDaysIso(summaryWindowStart, CASH_FLOW_SUMMARY_WINDOW_DAYS);
+  const summaryWindowItems = useMemo(() => openItems.filter(item => (
+    item.due_date >= summaryWindowStart && item.due_date < summaryWindowEnd
+  )), [openItems, summaryWindowEnd, summaryWindowStart]);
+  const projectedOutflow = useMemo(() => summaryWindowItems
     .filter(item => item.flow_type !== 'income')
-    .reduce((sum, item) => sum + item.amount, 0), [openItems]);
-  const projectedIncome = useMemo(() => openItems
+    .reduce((sum, item) => sum + item.amount, 0), [summaryWindowItems]);
+  const projectedIncome = useMemo(() => summaryWindowItems
     .filter(item => item.flow_type === 'income')
-    .reduce((sum, item) => sum + item.amount, 0), [openItems]);
+    .reduce((sum, item) => sum + item.amount, 0), [summaryWindowItems]);
   const nextEvent = useMemo(() => openItems[0], [openItems]);
   const timelineRange = useMemo(() => formatDateRange(displayItems), [displayItems]);
   const buffer = totalCash + projectedIncome - projectedOutflow;
@@ -278,9 +285,9 @@ export function CashFlowPage() {
   const stats = (
     <>
       <div className="text-gray-500">Cash: <span className="font-bold text-gray-900 dark:text-white">{wholeMoney(totalCash)}</span></div>
-      <div className="text-gray-500">Projected In: <span className="font-bold text-green-600">{wholeMoney(projectedIncome)}</span></div>
-      <div className="text-gray-500">Projected Out: <span className="font-bold text-amber-600">{wholeMoney(projectedOutflow)}</span></div>
-      <div className="text-gray-500">Buffer: <span className={`font-bold ${buffer >= 0 ? 'text-green-600' : 'text-red-600'}`}>{wholeMoney(buffer)}</span></div>
+      <div className="text-gray-500">30d In: <span className="font-bold text-green-600">{wholeMoney(projectedIncome)}</span></div>
+      <div className="text-gray-500">30d Out: <span className="font-bold text-amber-600">{wholeMoney(projectedOutflow)}</span></div>
+      <div className="text-gray-500">30d Buffer: <span className={`font-bold ${buffer >= 0 ? 'text-green-600' : 'text-red-600'}`}>{wholeMoney(buffer)}</span></div>
     </>
   );
 
@@ -292,8 +299,8 @@ export function CashFlowPage() {
 
       <div className="grid grid-cols-1 xl:grid-cols-4 gap-4 mb-8" id="cashflow-stats">
         <SummaryTile label="Available Cash" value={wholeMoney(totalCash)} tone="emerald" />
-        <SummaryTile label="Projected Income" value={wholeMoney(projectedIncome)} tone="green" />
-        <SummaryTile label="Projected Payments" value={wholeMoney(projectedOutflow)} tone="amber" />
+        <SummaryTile label="30-Day Income" value={wholeMoney(projectedIncome)} tone="green" />
+        <SummaryTile label="30-Day Payments" value={wholeMoney(projectedOutflow)} tone="amber" />
         <SummaryTile label="Next Event" value={nextEvent ? `${nextEvent.name} - ${formatShortDate(nextEvent.due_date)}` : 'None'} tone="gray" compact />
       </div>
 

@@ -21,16 +21,3 @@ export function DetailTile({ label, value }: { label: string; value: string }) {
     </div>
   );
 }
-
-export function InfoGrid({ rows }: { rows: [string, string][] }) {
-  return (
-    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-      {rows.map(([label, value]) => (
-        <div key={label} className="rounded-xl bg-gray-50 dark:bg-gray-900 p-4">
-          <div className="text-[11px] font-bold uppercase tracking-widest text-gray-400">{label}</div>
-          <div className="money-value mt-2 text-sm font-black text-gray-900 dark:text-white">{value}</div>
-        </div>
-      ))}
-    </div>
-  );
-}
